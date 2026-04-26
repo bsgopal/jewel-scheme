@@ -1,0 +1,219 @@
+:root {
+  --bg: #fffaf2;
+  --bg-soft: #fff3de;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: #ffffff;
+  --line: rgba(169, 126, 39, 0.18);
+  --text: #3e2b16;
+  --muted: #85684a;
+  --brand: #c89b3c;
+  --brand-deep: #a9771c;
+  --accent: #a33a2b;
+  --success: #2d8a52;
+  color-scheme: light;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  width: 100%;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(200, 155, 60, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(163, 58, 43, 0.08), transparent 24%),
+    linear-gradient(180deg, #fffdf8 0%, #fff7eb 48%, #fffaf4 100%);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: contain;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+code {
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.app-safe-shell {
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+}
+
+.home-screen {
+  overflow-x: hidden;
+}
+
+.home-container {
+  width: 100%;
+}
+
+.home-hero-shell .slick-dots {
+  bottom: 12px;
+}
+
+.home-hero-shell .slick-dots li,
+.home-hero-shell .slick-dots li button {
+  width: 8px;
+  height: 8px;
+  margin: 0 2px;
+}
+
+.home-hero-shell .slick-dots li button:before {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.home-hero-shell .slick-dots li.slick-active button:before {
+  color: #fff7eb;
+  opacity: 1;
+}
+
+.home-stat-value {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.home-rate-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.home-rate-currency,
+.home-rate-unit {
+  font-size: 0.66em;
+  font-weight: 800;
+  color: #6f5334;
+}
+
+@media (max-width: 520px) {
+  .app-safe-shell {
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .home-topbar {
+    border-radius: 16px !important;
+    padding: 8px 10px !important;
+    box-shadow: 0 12px 24px rgba(133, 104, 74, 0.08) !important;
+  }
+
+  .home-main-grid {
+    margin-top: 16px !important;
+    gap: 18px !important;
+  }
+
+  .home-hero-shell {
+    border-radius: 22px !important;
+    box-shadow: 0 16px 32px rgba(133, 104, 74, 0.1) !important;
+  }
+
+  .home-hero-slide {
+    min-height: 222px !important;
+    padding: 24px 18px 34px !important;
+    align-items: flex-end !important;
+  }
+
+  .home-hero-content {
+    max-width: 86% !important;
+  }
+
+  .home-hero-title {
+    font-size: 23px !important;
+    line-height: 1.08 !important;
+  }
+
+  .home-hero-button {
+    height: 38px !important;
+    margin-top: 14px !important;
+    padding: 0 16px !important;
+    font-size: 13px !important;
+  }
+
+  .home-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .home-stat-card {
+    min-height: 86px;
+    border-radius: 15px !important;
+    padding: 14px !important;
+  }
+
+  .home-stat-value {
+    font-size: 17px !important;
+    line-height: 1.16 !important;
+  }
+
+  .home-rate-value {
+    gap: 3px;
+  }
+
+  .home-rate-currency,
+  .home-rate-unit {
+    font-size: 0.68em;
+  }
+
+  .home-snapshot-card {
+    border-radius: 20px !important;
+    padding: 18px !important;
+  }
+
+  .home-snapshot-title {
+    font-size: 23px !important;
+    line-height: 1.12 !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-safe-shell {
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+  }
+
+  .home-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-stat-value {
+    font-size: 20px !important;
+  }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

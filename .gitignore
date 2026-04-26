@@ -1,0 +1,45 @@
+# Workspace
+ref_repo/
+
+# Logs
+*.log
+frontend-dev.log
+backend-dev.log
+
+# Dependencies
+backend/node_modules/
+frontend/node_modules/
+
+# Frontend build artifacts
+frontend/build/
+
+# Environment and secrets
+backend/.env
+frontend/.env
+frontend/.env.development
+frontend/.env.production
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Backend runtime data
+backend/uploads/
+
+# Android / Capacitor generated files and secrets
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/local.properties
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/app/build/
+frontend/android/app/google-services.json
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/app/src/main/assets/capacitor.plugins.json
+frontend/android/app/src/main/res/xml/config.xml
+
+# IDE files
+.DS_Store
+Thumbs.db
+**/.idea/
+*.iml

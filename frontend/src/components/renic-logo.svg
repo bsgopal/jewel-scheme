@@ -1,0 +1,26 @@
+<svg
+  width="420"
+  height="120"
+  viewBox="0 0 420 120"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <style>
+    .logo-text {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-weight: 500;
+      letter-spacing: 8px;
+      fill: #000000;
+    }
+  </style>
+
+  <text
+    x="50%"
+    y="50%"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-size="72"
+    class="logo-text"
+  >
+    RENIC
+  </text>
+</svg>

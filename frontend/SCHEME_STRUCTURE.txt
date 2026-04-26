@@ -1,0 +1,119 @@
+********** STRUCTURE FOR SCHEME GROUP************
+**************************************************
+
+CREATE TABLE `scheme_groups` (
+  `group_code` varchar(10) NOT NULL default '',
+  `no_of_members` int(4) default NULL,
+  `start_no` int(5) default NULL,
+  `is_closed` char(1) default NULL,
+  `group_desc` varchar(50) default NULL,
+  `AMOUNT` double default NULL,
+  `gold_scheme` char(1) default NULL,
+  `created_date` datetime default NULL,
+   `bonus` int(5) default '0',
+  `closed_date` date default NULL,
+  `no_of_inst` int(5) default NULL,
+  `tot_balance` int(11) default NULL,
+  `tot_gold_balance` decimal(9,3) default NULL,
+  `isflexible` varchar(1) default NULL,
+  `NOTE` varchar(100) default NULL,
+  `branch` varchar(5) default NULL,
+   `Sync_Status` varchar(5) default NULL,
+    PRIMARY KEY  (`code`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+
+********** STRUCTURE FOR MEMBER************
+**************************************************
+
+CREATE TABLE `scheme_members` (
+  `cust_id` int(11) NOT NULL auto_increment,
+  `sgroup` varchar(10) default NULL,
+  `s_mem_no` int(11) default NULL,
+  `salutation` varchar(5) default NULL,
+  `cust_name` varchar(50) default NULL COMMENT 'firstname',
+  `cust_sname` varchar(50) default NULL COMMENT 'secondname',
+  `address1` varchar(500) default NULL,
+  `address2` varchar(150) default NULL,
+  `address3` varchar(150) default NULL,
+  `place` varchar(150) default NULL,
+  `pin` varchar(100) default NULL,
+  `phone` varchar(50) default NULL,
+  `mobile` varchar(50) default NULL,
+  `email` varchar(50) default NULL,
+  `inst_amount` double default NULL,
+  `tot_c_balance` int(6) default NULL,
+  `tot_m_balance` decimal(8,3) default NULL,
+  `note` varchar(100) default NULL,
+  `join_date` datetime default NULL,
+  `last_modified` datetime default NULL,
+  `close_status` varchar(50) default NULL COMMENT 'A-SAS No,W winner',
+  `introducer` int(10) default NULL,
+  `introducer_relation` varchar(20) default NULL,
+  `collection_type` varchar(2) default 'S' COMMENT 'S-self,C-collection',
+  `dob` date default NULL,
+  `annv_date` date default NULL,
+  `status` varchar(15) default NULL,
+  `wt_conv` tinyint(1) default NULL,
+  `metal_name` varchar(15) default NULL,
+  `silver_balance` double(16,3) default NULL,
+  `nominee` varchar(50) default NULL,
+  `nom_mob` varchar(20) default NULL,
+  `nom_relation` varchar(30) default NULL,
+  `staff` varchar(25) default NULL,
+  `sync_status` varchar(5) default NULL,
+  `branch` varchar(5) default NULL,
+  `panno` varchar(25) default NULL,
+  `floor` varchar(10) default NULL,
+  `IsClosed` char(1) default NULL,
+   `maturity_dt` date default NULL,
+  `aadhaar` varchar(20) default NULL,
+  PRIMARY KEY  (`cust_id`),
+  KEY `idx_branch` (`branch`),
+  KEY `idx_membid` (`cust_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+
+
+
+********** STRUCTURE FOR PAYMENT************
+**************************************************
+
+CREATE TABLE `scheme_payment` (
+  `id` int(11) NOT NULL auto_increment,
+  `receipt_no` varchar(20) default NULL,
+  `receipt_date` date default NULL,
+  `cust_id` int(11) default NULL,
+  `receipt_type` varchar(50) default NULL COMMENT 'R-rec,P-PAYMENT',
+  `AMOUNT` double default NULL,
+  `metak_wt` decimal(8,3) default NULL,
+  `metal_rate` int(5) default NULL,
+  `paymode1` int(1) default NULL,
+  `pmode1_Amt` double default NULL,
+  `remarks` varchar(1000) default NULL,
+  `Rec_in` varchar(25) default NULL COMMENT 'App,Online',
+  `Staff` varchar(50) default NULL,
+  `sync_status` varchar(5) default NULL,
+  `branch` varchar(5) default NULL,
+  `cancelled_amount` double default NULL,
+  `Time` time default NULL,
+  `cancel_note` varchar(500) default NULL,
+  `bank` varchar(50) default NULL,
+  `INST` int(11) default NULL,
+  `pmode2` int(11) default NULL,
+  `pmode2_Amt` double default NULL,
+  PRIMARY KEY  (`id`),
+) ENGINE=MyISAM AUTO_INCREMENT=1DEFAULT CHARSET=latin1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
