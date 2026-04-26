@@ -23,12 +23,14 @@ export default function ManageOffers() {
     const navigate = useNavigate();
     const [offers, setOffers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [deletingId, setDeletingId] = useState(null);
     const [togglingId, setTogglingId] = useState(null);
     const [filter, setFilter] = useState("all");
 
     const fetchOffers = useCallback(async () => {
         setLoading(true);
+        setError("");
         try {
             const res = await axios.get(`${API}/api/offers?include_all=true`, {
                 headers: authHeaders(),
@@ -36,6 +38,13 @@ export default function ManageOffers() {
             setOffers(res.data);
         } catch (err) {
             console.error("Failed to fetch offers", err);
+            setOffers([]);
+            setError(
+                err.response?.data?.message ||
+                (err.request
+                    ? "Unable to load offers right now. Please check your connection and try again."
+                    : "Something went wrong while loading offers.")
+            );
         } finally {
             setLoading(false);
         }
@@ -89,7 +98,7 @@ export default function ManageOffers() {
     };
 
     return (
-        <div style={{
+        <div className="app-safe-shell" style={{
             minHeight: "100vh",
             background: "linear-gradient(180deg, #fffdf8 0%, #fff4df 100%)",
             fontFamily: "'Montserrat', sans-serif",
@@ -97,37 +106,40 @@ export default function ManageOffers() {
         }}>
 
             {/* ── Header ── */}
-            <div style={{
-                position: "sticky", top: 0, zIndex: 100,
+            <div className="manage-offers-header" style={{
+                position: "sticky", top: "env(safe-area-inset-top, 0px)", zIndex: 100,
                 background: "rgba(255,255,255,0.92)", backdropFilter: "blur(14px)",
                 borderBottom: "1px solid rgba(169,126,39,0.12)",
                 boxShadow: "0 4px 20px rgba(133,104,74,0.08)",
-                padding: "0 16px", height: 58,
+                padding: "10px 16px 12px",
+                minHeight: 64,
                 display: "flex", alignItems: "center", gap: 12,
             }}>
                 <motion.button
+                    className="manage-offers-back"
                     whileTap={{ scale: 0.9 }}
                     onClick={() => navigate("/Home")}
                     style={{
                         background: "#fff4e2", border: "1px solid rgba(169,118,28,0.15)",
                         borderRadius: 10, padding: "6px 8px", cursor: "pointer",
-                        display: "flex", alignItems: "center",
+                        display: "flex", alignItems: "center", flexShrink: 0,
                     }}
                 >
                     <ArrowBack style={{ color: "#a9771c", fontSize: 20 }} />
                 </motion.button>
 
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "1rem", fontWeight: 800, color: "#3e2b16", fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>
+                <div className="manage-offers-title-wrap" style={{ flex: 1, minWidth: 0 }}>
+                    <div className="manage-offers-title" style={{ fontSize: "1rem", fontWeight: 800, color: "#3e2b16", fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>
                         Manage Offers
                     </div>
-                    <div style={{ fontSize: "0.45rem", color: "#a9771c", letterSpacing: "0.2em" }}>
+                    <div className="manage-offers-subtitle" style={{ fontSize: "0.45rem", color: "#a9771c", letterSpacing: "0.2em" }}>
                         ADD · EDIT · TOGGLE · REMOVE
                     </div>
                 </div>
 
                 {/* Add button */}
                 <motion.button
+                    className="manage-offers-add"
                     whileTap={{ scale: 0.92 }}
                     whileHover={{ scale: 1.05 }}
                     onClick={() => navigate("/offers/new")}
@@ -138,6 +150,7 @@ export default function ManageOffers() {
                         cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
                         fontFamily: "'Montserrat', sans-serif",
                         boxShadow: "0 4px 14px rgba(169,119,28,0.3)",
+                        flexShrink: 0,
                     }}
                 >
                     <Add style={{ fontSize: 18 }} /> ADD OFFER
@@ -212,7 +225,27 @@ export default function ManageOffers() {
                 )}
 
                 {/* ── Empty ── */}
-                {!loading && filtered.length === 0 && (
+                {!loading && error && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        style={{
+                            textAlign: "center",
+                            padding: "28px 18px",
+                            marginBottom: 16,
+                            background: "#fff6f3",
+                            border: "1px solid rgba(192,57,43,0.18)",
+                            borderRadius: 14,
+                            color: "#a33a2b",
+                            fontSize: "0.78rem",
+                            lineHeight: 1.6,
+                        }}
+                    >
+                        {error}
+                    </motion.div>
+                )}
+
+                {!loading && !error && filtered.length === 0 && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

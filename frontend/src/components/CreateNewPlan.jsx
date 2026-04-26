@@ -76,9 +76,9 @@ const defaultPlanData = {
   bannerPreview: bannerOne,
   imageUrl: "",
   terms: defaultTerms,
-  makingChargeDiscount: 75,
-  wastageDiscount: 75,
-  diamondDiscount: 60,
+  makingChargeDiscount: 0,
+  wastageDiscount: 0,
+  diamondDiscount: 0,
   extraBonusPercentage: 0,
   popular: false,
 };
@@ -171,9 +171,9 @@ export default function CreateNewPlan() {
           bannerPreview: plan.imageUrl ? `${API}${plan.imageUrl}` : bannerOne,
           imageUrl: plan.imageUrl || "",
           terms: plan.terms?.length ? plan.terms : defaultTerms,
-          makingChargeDiscount: plan.benefits?.makingChargeDiscount || 75,
-          wastageDiscount: plan.benefits?.wastageDiscount || 75,
-          diamondDiscount: plan.benefits?.diamondDiscount || 60,
+          makingChargeDiscount: plan.benefits?.makingChargeDiscount ?? 0,
+          wastageDiscount: plan.benefits?.wastageDiscount ?? 0,
+          diamondDiscount: plan.benefits?.diamondDiscount ?? 0,
           extraBonusPercentage: plan.benefits?.extraBonusPercentage || 0,
           popular: Boolean(plan.popular),
         });
@@ -227,7 +227,6 @@ export default function CreateNewPlan() {
       const res = await axios.post(`${API}/api/plan-catalog/upload`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -237,7 +236,11 @@ export default function CreateNewPlan() {
         bannerPreview: res.data?.url ? `${API}${res.data.url}` : prev.bannerPreview,
       }));
     } catch (error) {
-      setSnackbar({ open: true, message: "Banner upload failed.", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || "Banner upload failed.",
+        severity: "error",
+      });
     } finally {
       setUploading(false);
     }

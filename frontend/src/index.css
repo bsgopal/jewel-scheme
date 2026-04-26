@@ -113,6 +113,19 @@ code {
   color: #6f5334;
 }
 
+.home-feature-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.home-feature-card:hover {
+  border-color: rgba(169, 126, 39, 0.24);
+  box-shadow: 0 18px 34px rgba(133, 104, 74, 0.12);
+}
+
+.manage-offers-title-wrap {
+  overflow: hidden;
+}
+
 @media (max-width: 520px) {
   .app-safe-shell {
     padding-right: max(14px, env(safe-area-inset-right, 0px));
@@ -191,6 +204,75 @@ code {
     font-size: 23px !important;
     line-height: 1.12 !important;
   }
+
+  .home-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .home-feature-card {
+    min-height: 126px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+    gap: 14px !important;
+  }
+
+  .home-feature-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 13px !important;
+  }
+
+  .home-feature-label {
+    font-size: 14px !important;
+  }
+
+  .home-feature-arrow {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 14px !important;
+  }
+
+  .manage-offers-header {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto;
+    align-items: start !important;
+    gap: 10px !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    padding-bottom: 10px !important;
+    min-height: unset !important;
+  }
+
+  .manage-offers-back {
+    margin-top: 2px;
+  }
+
+  .manage-offers-title-wrap {
+    min-width: 0;
+    padding-top: 2px;
+  }
+
+  .manage-offers-title {
+    font-size: 0.92rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .manage-offers-subtitle {
+    margin-top: 4px;
+    font-size: 0.42rem !important;
+    letter-spacing: 0.16em !important;
+    line-height: 1.3 !important;
+    white-space: normal;
+  }
+
+  .manage-offers-add {
+    height: 34px !important;
+    padding-inline: 12px !important;
+    border-radius: 12px !important;
+    font-size: 0.68rem !important;
+    gap: 4px !important;
+    align-self: start;
+  }
 }
 
 @media (max-width: 360px) {
@@ -205,6 +287,21 @@ code {
 
   .home-stat-value {
     font-size: 20px !important;
+  }
+
+  .home-feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .manage-offers-header {
+    grid-template-columns: auto 1fr !important;
+  }
+
+  .manage-offers-add {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+    margin-top: 2px;
   }
 }
 

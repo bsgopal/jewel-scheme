@@ -144,14 +144,25 @@ export default function AddEditOffer() {
 
   const uploadFile = async (file, type, setUrl, setUploading) => {
     setUploading(true);
+    setError("");
     const fd = new FormData();
     fd.append("file", file);
     fd.append("fileType", type);
     try {
       const res = await fetch(`${API}/api/offers/upload`, { method: "POST", headers: authHeaders(), body: fd });
       const data = await res.json();
-      if (data.url) setUrl(data.url);
-    } catch { setError("Upload failed."); }
+      if (!res.ok) {
+        setError(data.message || "Upload failed.");
+        return;
+      }
+      if (data.url) {
+        setUrl(data.url);
+        return;
+      }
+      setError("Upload failed.");
+    } catch {
+      setError("Upload failed.");
+    }
     finally { setUploading(false); }
   };
 

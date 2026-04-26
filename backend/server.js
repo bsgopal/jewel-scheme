@@ -13,6 +13,9 @@ connectDB();
 
 const app = express();
 
+// Render sits behind a proxy/load balancer, so trust forwarded client IP headers.
+app.set('trust proxy', 1);
+
 app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));

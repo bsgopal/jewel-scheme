@@ -63,6 +63,7 @@ function FeatureCard({ item, onClick }) {
 
   return (
     <motion.button
+      className="home-feature-card"
       whileHover={{ y: -3 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
@@ -74,9 +75,17 @@ function FeatureCard({ item, onClick }) {
         textAlign: "left",
         cursor: "pointer",
         boxShadow: "0 14px 30px rgba(133, 104, 74, 0.08)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 16,
+        minHeight: 148,
+        width: "100%",
       }}
     >
       <div
+        className="home-feature-icon"
         style={{
           width: 48,
           height: 48,
@@ -89,7 +98,27 @@ function FeatureCard({ item, onClick }) {
       >
         <Icon />
       </div>
-      <div style={{ marginTop: 14, fontWeight: 800, color: "#3e2b16", fontSize: 15 }}>{item.label}</div>
+      <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div className="home-feature-label" style={{ fontWeight: 800, color: "#3e2b16", fontSize: 15, lineHeight: 1.15 }}>
+          {item.label}
+        </div>
+        <div
+          className="home-feature-arrow"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 999,
+            background: "rgba(200, 155, 60, 0.12)",
+            color: "#8c6518",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 15,
+            flexShrink: 0,
+          }}
+        >
+          ›
+        </div>
+      </div>
     </motion.button>
   );
 }
@@ -577,6 +606,7 @@ export default function Home() {
         <div style={{ marginTop: 28, display: "grid", gap: 18 }}>
           <SectionHead title="Available Actions" />
           <div
+            className="home-feature-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
