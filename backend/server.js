@@ -36,6 +36,10 @@ const configuredOrigins = [
 const allowedOrigins = [...new Set([
     'http://localhost:3000',
     'http://localhost:3001',
+    'http://localhost',
+    'https://localhost',
+    'capacitor://localhost',
+    'ionic://localhost',
     ...configuredOrigins
 ])];
 

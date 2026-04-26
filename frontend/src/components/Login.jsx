@@ -76,7 +76,13 @@ export default function Login() {
         });
         return;
       }
-      setError(err.response?.data?.message || "Unable to sign in right now.");
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.request) {
+        setError("Unable to reach the server. Please check your internet connection and try again.");
+      } else {
+        setError("Unable to sign in right now.");
+      }
     } finally {
       setLoading(false);
     }
