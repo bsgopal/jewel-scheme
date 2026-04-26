@@ -9,7 +9,7 @@ const {
   getAgentCustomers,
   assignCustomers,
   removeCustomer,
-} = require('../controllers/agentManageController');
+} = require('../controllers/Agentmanagecontroller');
 
 // All routes below require admin only
 router.use(protect, authorize('admin'));

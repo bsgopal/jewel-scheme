@@ -83,7 +83,7 @@ app.use('/api/home', require('./routes/homeRoutes'));
 app.use('/api/plan-catalog', require('./routes/planCatalogRoutes'));
 app.use('/api/wallet', require('./routes/walletRoutes'));
 app.use('/api/agent', require('./routes/agentRoutes'));
-app.use('/api/agents', require('./routes/agentManageRoutes'));
+app.use('/api/agents', require('./routes/Agentmanageroutes'));
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({

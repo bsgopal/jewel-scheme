@@ -8,7 +8,13 @@
     "dev": "nodemon server.js",
     "seed": "node seed.js"
   },
-  "keywords": ["jewellery", "gold", "scheme", "savings", "mongodb"],
+  "keywords": [
+    "jewellery",
+    "gold",
+    "scheme",
+    "savings",
+    "mongodb"
+  ],
   "author": "JewelScheme",
   "license": "ISC",
   "dependencies": {
@@ -28,7 +34,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.14"
   },
   "engines": {
     "node": ">=16.0.0"
