@@ -182,7 +182,7 @@ function InstCard({ item, onCollect, idx, selected, onToggle }) {
             whileTap={{ scale: 0.96 }}
             onClick={() => {
               if (!item.phone) return alert("No phone number for this customer");
-              const msg = `Hi ${item.customerName}, your gold scheme installment of ₹${fmt(item.amount)} for plan "${item.planName}" is due. Please make the payment to continue enjoying benefits. - JewelScheme`;
+              const msg = `Hi ${item.customerName}, your gold scheme installment of ₹${fmt(item.amount)} for plan "${item.planName}" is due. Please make the payment to continue enjoying benefits. - Renic Tech`;
               window.open(`https://wa.me/91${item.phone}?text=${encodeURIComponent(msg)}`, "_blank");
             }}
             style={{
@@ -297,7 +297,7 @@ export default function AgentDashboard() {
   // ── Called when agent taps "Open WhatsApp" for current item in queue ──────
   const handleQueueSend = () => {
     const item = bulkQueue[bulkIndex];
-    const msg  = `Hi ${item.customerName}, your gold scheme installment of ₹${fmt(item.amount)} for plan "${item.planName}" is due. Please make the payment to continue enjoying benefits. - JewelScheme`;
+    const msg  = `Hi ${item.customerName}, your gold scheme installment of ₹${fmt(item.amount)} for plan "${item.planName}" is due. Please make the payment to continue enjoying benefits. - Renic Tech`;
     window.open(`https://wa.me/91${item.phone}?text=${encodeURIComponent(msg)}`, "_blank");
 
     const newSent = bulkSent + 1;

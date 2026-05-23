@@ -24,6 +24,16 @@ import bannerOne from "./images/banner1.jpg";
 import { getBackTarget } from "../utils/navigation";
 
 const API = process.env.REACT_APP_API_URL;
+const fallbackPlanBanner = `${process.env.PUBLIC_URL}/images/banner1.png`;
+
+const resolveAssetUrl = (path, fallback = fallbackPlanBanner) => {
+  if (!path) return fallback;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+
+  return `${API?.replace(/\/$/, "") || ""}${path.startsWith("/") ? "" : "/"}${path}`;
+};
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -168,7 +178,7 @@ export default function CreateNewPlan() {
           benefits: plan.features?.length ? plan.features : defaultPlanData.benefits,
           status: plan.active ? "Active" : "Inactive",
           priority: plan.priority || 1,
-          bannerPreview: plan.imageUrl ? `${API}${plan.imageUrl}` : bannerOne,
+          bannerPreview: resolveAssetUrl(plan.imageUrl, bannerOne),
           imageUrl: plan.imageUrl || "",
           terms: plan.terms?.length ? plan.terms : defaultTerms,
           makingChargeDiscount: plan.benefits?.makingChargeDiscount ?? 0,
@@ -233,7 +243,7 @@ export default function CreateNewPlan() {
       setPlanData((prev) => ({
         ...prev,
         imageUrl: res.data?.url || "",
-        bannerPreview: res.data?.url ? `${API}${res.data.url}` : prev.bannerPreview,
+        bannerPreview: res.data?.url ? resolveAssetUrl(res.data.url, prev.bannerPreview || bannerOne) : prev.bannerPreview,
       }));
     } catch (error) {
       setSnackbar({
@@ -314,7 +324,7 @@ export default function CreateNewPlan() {
         )}
       </AnimatePresence>
 
-      <div style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "0 16px", height: 56, display: "flex", alignItems: "center", gap: 12, borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(56px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", gap: 12, borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100 }}>
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}>
           <ArrowBackIcon style={{ color: "#FFD700", fontSize: 20 }} />
         </motion.button>

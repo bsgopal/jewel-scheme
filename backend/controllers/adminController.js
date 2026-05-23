@@ -136,15 +136,21 @@ exports.getDashboardStats = async (req, res, next) => {
 // @access  Private/Admin
 exports.updateGoldRate = async (req, res, next) => {
     try {
-        const { gold22K, gold24K, gold18K, silver, platinum, notes } = req.body;
+        const { gold24K, silver, platinum, notes } = req.body;
 
-        // Validate
-        if (!gold22K || !gold24K || !gold18K || !silver) {
+        // Validate required fields
+        if (!gold24K || !silver) {
             return res.status(400).json({
                 success: false,
-                message: 'Please provide all required rates (22K, 24K, 18K gold and silver)'
+                message: 'Please provide 24K gold rate and silver rate'
             });
         }
+
+        const rate24K = Number(gold24K);
+        
+        // Auto-calculate 22K and 18K from 24K
+        const gold22K = Math.round(rate24K * (22 / 24) * 100) / 100;
+        const gold18K = Math.round(rate24K * (18 / 24) * 100) / 100;
 
         // Get today's date (without time)
         const today = new Date();
@@ -161,7 +167,7 @@ exports.updateGoldRate = async (req, res, next) => {
         if (goldRate) {
             // Update existing
             goldRate.gold22K = gold22K;
-            goldRate.gold24K = gold24K;
+            goldRate.gold24K = rate24K;
             goldRate.gold18K = gold18K;
             goldRate.silver = silver;
             goldRate.platinum = platinum || 0;
@@ -173,7 +179,7 @@ exports.updateGoldRate = async (req, res, next) => {
             goldRate = await GoldRate.create({
                 date: today,
                 gold22K,
-                gold24K,
+                gold24K: rate24K,
                 gold18K,
                 silver,
                 platinum: platinum || 0,

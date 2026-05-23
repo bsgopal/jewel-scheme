@@ -8,9 +8,18 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 const API = process.env.REACT_APP_API_URL;
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+const resolveAssetUrl = (path) => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) {
+    return path;
+  }
+
+  return `${API?.replace(/\/$/, "") || ""}${path.startsWith("/") ? "" : "/"}${path}`;
+};
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -125,9 +134,9 @@ export default function AddEditOffer() {
 
   useEffect(() => {
     if (!isEdit) return;
-    fetch(`${API}/api/offers/${id}`)
-      .then((r) => r.json())
-      .then((offer) => {
+    axios.get(`${API}/api/offers/${id}`)
+      .then((res) => {
+        const offer = res.data;
         setForm({
           title: offer.title || "",
           subtitle: offer.subtitle || "",
@@ -137,7 +146,11 @@ export default function AddEditOffer() {
           validTill: offer.valid_to ? offer.valid_to.slice(0, 10) : "",
           active: offer.active ?? true,
         });
-        if (offer.banner_url) { setBannerUrl(offer.banner_url); setBannerPreview(`${API}${offer.banner_url}`); }
+        if (offer.banner_url || offer.image_url) {
+          const uploadedBanner = offer.banner_url || offer.image_url;
+          setBannerUrl(uploadedBanner);
+          setBannerPreview(resolveAssetUrl(uploadedBanner));
+        }
         if (offer.pdf_url) setPdfUrl(offer.pdf_url);
       });
   }, [id, isEdit]);
@@ -149,19 +162,16 @@ export default function AddEditOffer() {
     fd.append("file", file);
     fd.append("fileType", type);
     try {
-      const res = await fetch(`${API}/api/offers/upload`, { method: "POST", headers: authHeaders(), body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Upload failed.");
-        return;
-      }
-      if (data.url) {
-        setUrl(data.url);
+      const res = await axios.post(`${API}/api/offers/upload`, fd, {
+        headers: authHeaders(),
+      });
+      if (res.data?.url) {
+        setUrl(res.data.url);
         return;
       }
       setError("Upload failed.");
-    } catch {
-      setError("Upload failed.");
+    } catch (error) {
+      setError(error.response?.data?.message || "Upload failed.");
     }
     finally { setUploading(false); }
   };
@@ -194,14 +204,15 @@ export default function AddEditOffer() {
       type: offerType,
     };
     try {
-      const res = await fetch(
-        isEdit ? `${API}/api/offers/${id}` : `${API}/api/offers`,
-        { method: isEdit ? "PUT" : "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) }
-      );
-      const data = await res.json();
-      if (data.success) navigate("/manage-offers");
-      else setError(data.message || "Save failed.");
-    } catch { setError("Network error."); }
+      const res = await axios({
+        url: isEdit ? `${API}/api/offers/${id}` : `${API}/api/offers`,
+        method: isEdit ? "put" : "post",
+        data: body,
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+      });
+      if (res.data?.success) navigate("/manage-offers");
+      else setError(res.data?.message || "Save failed.");
+    } catch (error) { setError(error.response?.data?.message || "Network error."); }
     finally { setSaving(false); }
   };
 
@@ -214,15 +225,16 @@ export default function AddEditOffer() {
     }}>
 
       {/* ── Header ── */}
-      <div style={{
+      <div className="offer-editor-header" style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "rgba(255,255,255,0.92)", backdropFilter: "blur(14px)",
         borderBottom: "1px solid rgba(169,126,39,0.12)",
         boxShadow: "0 4px 20px rgba(133,104,74,0.08)",
-        padding: "0 16px", height: 58,
+        padding: "calc(env(safe-area-inset-top, 0px) + 8px) 16px 10px", minHeight: "calc(58px + env(safe-area-inset-top, 0px))",
         display: "flex", alignItems: "center", gap: 12,
       }}>
         <IconButton
+          className="offer-editor-back"
           onClick={() => navigate("/manage-offers")}
           sx={{
             color: "#a9771c", background: "#fff4e2",
@@ -233,7 +245,7 @@ export default function AddEditOffer() {
           <ArrowBackIosNewIcon fontSize="small" />
         </IconButton>
 
-        <div style={{ flex: 1 }}>
+        <div className="offer-editor-title-wrap" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: "1rem", fontWeight: 800, color: "#3e2b16", fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>
             {isEdit ? "Edit Offer" : "Add Offer"}
           </div>
@@ -242,7 +254,7 @@ export default function AddEditOffer() {
           </div>
         </div>
 
-        <div style={{
+        <div className="offer-editor-type-badge" style={{
           background: typeBadge.bg, border: `1px solid ${typeBadge.border}`,
           borderRadius: 999, padding: "5px 11px",
           fontSize: "0.6rem", fontWeight: 700, color: typeBadge.color, whiteSpace: "nowrap",

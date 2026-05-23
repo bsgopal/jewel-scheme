@@ -1,8 +1,11 @@
 const User = require('../models/User');
-const GoldRate = require('../models/GoldRate');
 const Scheme = require('../models/Scheme');
 const Payment = require('../models/Payment');
 const WalletTransaction = require('../models/WalletTransaction');
+const {
+    getCurrentRateWithRefresh,
+    getRateForPurity
+} = require('../services/goldRateFetcher');
 
 const ensureWallet = async (userId) => {
     const user = await User.findById(userId);
@@ -85,8 +88,8 @@ exports.convertToGold = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
         }
 
-        const rate = await GoldRate.getCurrentRate();
-        const goldRate = rate?.gold22K;
+        const rate = await getCurrentRateWithRefresh();
+        const goldRate = getRateForPurity(rate, '22K');
         if (!goldRate) {
             return res.status(400).json({ success: false, message: 'Gold rate unavailable' });
         }
@@ -159,8 +162,8 @@ exports.payInstallmentFromWallet = async (req, res, next) => {
         user.walletBalance -= numericAmount;
         await user.save({ validateBeforeSave: false });
 
-        const rate = await GoldRate.getCurrentRate();
-        const goldRate = rate?.gold22K || 1;
+        const rate = await getCurrentRateWithRefresh();
+        const goldRate = getRateForPurity(rate, scheme.goldPurity) || 1;
         const goldWeight = Number((numericAmount / goldRate).toFixed(4));
         const payment = await Payment.create({
             user: targetUserId,

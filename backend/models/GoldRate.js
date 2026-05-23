@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { fetchLiveMetalRates } = require('../services/liveMetalRates');
 
 const goldRateSchema = new mongoose.Schema({
     date: {
@@ -54,6 +53,8 @@ const goldRateSchema = new mongoose.Schema({
         type: String,
         default: 'manual'
     },
+    providerUpdatedAt: Date,
+    fetchedAt: Date,
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -92,29 +93,7 @@ goldRateSchema.pre('save', async function(next) {
 
 // Static method to get current rate
 goldRateSchema.statics.getCurrentRate = async function() {
-    const manualRate = await this.findOne({ isActive: true }).sort({ date: -1 });
-
-    if (process.env.USE_LIVE_METAL_RATES === 'false') {
-        return manualRate;
-    }
-
-    try {
-        const liveRate = await fetchLiveMetalRates();
-        return {
-            ...(manualRate ? manualRate.toObject() : {}),
-            ...liveRate,
-            _id: manualRate?._id,
-            previousGold24K: manualRate?.previousGold24K,
-            previousGold22K: manualRate?.previousGold22K,
-            previousSilver: manualRate?.previousSilver,
-            change24K: manualRate?.change24K || 0,
-            change22K: manualRate?.change22K || 0,
-            changePercentage24K: manualRate?.changePercentage24K || 0,
-            changePercentage22K: manualRate?.changePercentage22K || 0,
-        };
-    } catch (error) {
-        return manualRate;
-    }
+    return this.findOne({ isActive: true }).sort({ date: -1, updatedAt: -1 });
 };
 
 // Static method to get rate history

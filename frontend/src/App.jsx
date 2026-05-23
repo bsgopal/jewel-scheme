@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Login from "./components/Login";
 import CreateAccount from "./components/CreateAccount";
 import Home from "./components/Home";
@@ -30,23 +30,23 @@ import ProtectedRoute from "./components/Features/ProtectedRoute";
 import OffersPage from "./components/offers/OffersPage";
 import ManageOffers from "./components/offers/ManageOffers";
 import ManageAgents from "./components/admin/ManageAgents";
-import AgentDetail  from "./components/admin/AgentDetail";
-
+import AgentDetail from "./components/admin/AgentDetail";
 import OfferDetails from "./components/offers/OfferDetails";
 import AddEditOffer from "./components/offers/AddEditOffer";
-
-import { PushNotifications } from '@capacitor/push-notifications';
-import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from "@capacitor/push-notifications";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import axios from "axios";
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [plans, setPlans] = useState([]);
   const hasToken = Boolean(localStorage.getItem("token"));
   const isGuest = localStorage.getItem("isGuest") === "true";
-  
-  // Set up axios defaults for CORS
+
   axios.defaults.withCredentials = true;
-  
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -59,23 +59,48 @@ function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    // 1️⃣ Ask permission
-    PushNotifications.requestPermissions().then(result => {
-      if (result.receive === 'granted') {
+    PushNotifications.requestPermissions().then((result) => {
+      if (result.receive === "granted") {
         PushNotifications.register();
       }
     });
 
-    // 2️⃣ Get FCM token
-    PushNotifications.addListener('registration', token => {
-      console.log('🔥 FCM TOKEN:', token.value);
+    PushNotifications.addListener("registration", (token) => {
+      console.log("FCM TOKEN:", token.value);
     });
 
-    // 3️⃣ Error handling
-    PushNotifications.addListener('registrationError', error => {
-      console.error('❌ FCM ERROR:', error);
+    PushNotifications.addListener("registrationError", (error) => {
+      console.error("FCM ERROR:", error);
     });
   }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let backListener;
+
+    const registerBackHandler = async () => {
+      backListener = await CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+        if (canGoBack || window.history.length > 1) {
+          navigate(-1);
+          return;
+        }
+
+        if (location.pathname !== "/Home") {
+          navigate("/Home", { replace: true });
+          return;
+        }
+
+        CapacitorApp.exitApp();
+      });
+    };
+
+    registerBackHandler();
+
+    return () => {
+      backListener?.remove();
+    };
+  }, [location.pathname, navigate]);
 
   const addNewPlan = (newPlanData) => {
     setPlans((prev) => [
@@ -89,14 +114,11 @@ function App() {
   };
 
   const updatePlan = (id, updatedData) => {
-    setPlans((prev) =>
-      prev.map((p) => (p.id === Number(id) ? { ...p, ...updatedData } : p))
-    );
+    setPlans((prev) => prev.map((plan) => (plan.id === Number(id) ? { ...plan, ...updatedData } : plan)));
   };
 
   return (
     <Routes>
-      {/* PUBLIC */}
       <Route path="/" element={hasToken || isGuest ? <Navigate to="/Home" replace /> : <Login />} />
       <Route path="/CreateAccount" element={<ProtectedRoute roles={["admin"]}><CreateAccount /></ProtectedRoute>} />
       <Route path="/otp" element={<OTP />} />
@@ -104,8 +126,6 @@ function App() {
       <Route path="/verifyForgotOtp" element={<VerifyForgotOtp />} />
       <Route path="/resetPassword" element={<ResetPassword />} />
 
-      {/* PROTECTED */}
-      {/* OFFERS */}
       <Route path="/offers" element={<ProtectedRoute><OffersPage /></ProtectedRoute>} />
       <Route path="/offers/new" element={<ProtectedRoute roles={["admin", "staff"]}><AddEditOffer /></ProtectedRoute>} />
       <Route path="/offers/:id" element={<ProtectedRoute><OfferDetails /></ProtectedRoute>} />
@@ -123,7 +143,6 @@ function App() {
       <Route path="/agent/manage-amounts" element={<ProtectedRoute roles={["agent", "admin", "staff"]}><AgentAmountManagement /></ProtectedRoute>} />
       <Route path="/agent/collect-installment" element={<ProtectedRoute roles={["agent", "admin", "staff"]}><AgentCollectInstallment /></ProtectedRoute>} />
       <Route path="/admin-manage" element={<ProtectedRoute roles={["admin"]}><AdminManage /></ProtectedRoute>} />
-
       <Route path="/createnewplan" element={<ProtectedRoute roles={["admin"]}><CreateNewPlan onCreatePlan={addNewPlan} /></ProtectedRoute>} />
       <Route path="/createnewplan/:id" element={<ProtectedRoute roles={["admin"]}><CreateNewPlan onUpdatePlan={updatePlan} plans={plans} /></ProtectedRoute>} />
       <Route path="/newplan" element={<ProtectedRoute><NewPlan /></ProtectedRoute>} />
@@ -135,8 +154,8 @@ function App() {
       <Route path="/manage-banners" element={<ProtectedRoute roles={["admin"]}><ManageBanners /></ProtectedRoute>} />
       <Route path="/manage-offers" element={<ProtectedRoute roles={["admin"]}><ManageOffers /></ProtectedRoute>} />
       <Route path="/offers/edit/:id" element={<ProtectedRoute roles={["admin", "staff"]}><AddEditOffer /></ProtectedRoute>} />
-      <Route path="/admin/agents"     element={<ProtectedRoute roles={["admin"]}><ManageAgents /></ProtectedRoute>} />
-<Route path="/admin/agents/:id" element={<ProtectedRoute roles={["admin"]}><AgentDetail /></ProtectedRoute>} />
+      <Route path="/admin/agents" element={<ProtectedRoute roles={["admin"]}><ManageAgents /></ProtectedRoute>} />
+      <Route path="/admin/agents/:id" element={<ProtectedRoute roles={["admin"]}><AgentDetail /></ProtectedRoute>} />
     </Routes>
   );
 }

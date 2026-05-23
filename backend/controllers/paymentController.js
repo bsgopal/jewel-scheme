@@ -2,8 +2,11 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Payment = require('../models/Payment');
 const Scheme = require('../models/Scheme');
-const GoldRate = require('../models/GoldRate');
 const User = require('../models/User');
+const {
+    getCurrentRateWithRefresh,
+    getRateForPurity
+} = require('../services/goldRateFetcher');
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -121,7 +124,7 @@ exports.verifyPayment = async (req, res, next) => {
         }
 
         // Get current gold rate
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
         if (!currentRate) {
             return res.status(400).json({
                 success: false,
@@ -129,9 +132,7 @@ exports.verifyPayment = async (req, res, next) => {
             });
         }
 
-        let goldRate = currentRate.gold22K;
-        if (scheme.goldPurity === '24K') goldRate = currentRate.gold24K;
-        if (scheme.goldPurity === '18K') goldRate = currentRate.gold18K;
+        const goldRate = getRateForPurity(currentRate, scheme.goldPurity);
 
         // Calculate gold weight and bonus
         const goldWeight = parseFloat((amount / goldRate).toFixed(4));

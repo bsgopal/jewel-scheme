@@ -1,0 +1,13 @@
+<svg width="820" height="180" viewBox="0 0 820 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.71 0 0 0 0 1 0 0 0 0 0.18 0 0 0 1 0"/>
+    </filter>
+  </defs>
+  <g transform="translate(24 12)">
+    <path d="M42 76L0 49L18 22L85 64L18 106L0 79L42 52" fill="#A5FF1E" filter="url(#glow)"/>
+    <path d="M74 67L54 0L100 11L106 56L145 32L170 68L130 92L164 111L140 147L103 124L97 169L51 175L57 110L74 67Z" fill="#101A26"/>
+  </g>
+  <text x="248" y="106" fill="#101A26" font-family="Segoe UI, Arial, sans-serif" font-size="78" font-weight="800" letter-spacing="1.5">RENIC TECH</text>
+</svg>

@@ -1,8 +1,11 @@
 const Scheme = require('../models/Scheme');
 const User = require('../models/User');
-const GoldRate = require('../models/GoldRate');
 const Payment = require('../models/Payment');
 const PlanCatalog = require('../models/PlanCatalog');
+const {
+    getCurrentRateWithRefresh,
+    getRateForPurity
+} = require('../services/goldRateFetcher');
 
 // Scheme plans configuration
 const SCHEME_PLANS = [
@@ -202,7 +205,7 @@ exports.createScheme = async (req, res, next) => {
         }
 
         // Get current gold rate
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
         if (!currentRate) {
             return res.status(400).json({
                 success: false,
@@ -212,17 +215,7 @@ exports.createScheme = async (req, res, next) => {
 
         // Determine gold rate based on purity
         const purity = goldPurity || '22K';
-        let goldRate;
-        switch (purity) {
-            case '24K':
-                goldRate = currentRate.gold24K;
-                break;
-            case '18K':
-                goldRate = currentRate.gold18K;
-                break;
-            default:
-                goldRate = currentRate.gold22K;
-        }
+        const goldRate = getRateForPurity(currentRate, purity);
 
         // Calculate gold weight for first installment
         const goldWeight = parseFloat((monthlyAmount / goldRate).toFixed(4));
@@ -312,16 +305,14 @@ exports.getUserSchemes = async (req, res, next) => {
             .sort(sortOption);
 
         // Get current gold rate for value calculation
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
 
         // Add calculated fields
         const schemesWithDetails = schemes.map(scheme => {
             const schemeObj = scheme.toObject();
             
             // Current value based on gold rate
-            let rateForPurity = currentRate?.gold22K || 0;
-            if (scheme.goldPurity === '24K') rateForPurity = currentRate?.gold24K || 0;
-            if (scheme.goldPurity === '18K') rateForPurity = currentRate?.gold18K || 0;
+            const rateForPurity = getRateForPurity(currentRate, scheme.goldPurity) || 0;
             
             schemeObj.currentValue = parseFloat((scheme.totalGoldWeight * rateForPurity).toFixed(2));
             schemeObj.profit = parseFloat((schemeObj.currentValue - scheme.totalAmountPaid).toFixed(2));
@@ -365,11 +356,9 @@ exports.getSchemeById = async (req, res, next) => {
         }
 
         // Get current gold rate
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
 
-        let rateForPurity = currentRate?.gold22K || 0;
-        if (scheme.goldPurity === '24K') rateForPurity = currentRate?.gold24K || 0;
-        if (scheme.goldPurity === '18K') rateForPurity = currentRate?.gold18K || 0;
+        const rateForPurity = getRateForPurity(currentRate, scheme.goldPurity) || 0;
 
         const schemeObj = scheme.toObject();
         schemeObj.currentGoldRate = rateForPurity;
@@ -443,7 +432,7 @@ exports.payInstallment = async (req, res, next) => {
         }
 
         // Get current gold rate
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
         if (!currentRate) {
             return res.status(400).json({
                 success: false,
@@ -451,9 +440,7 @@ exports.payInstallment = async (req, res, next) => {
             });
         }
 
-        let goldRate = currentRate.gold22K;
-        if (scheme.goldPurity === '24K') goldRate = currentRate.gold24K;
-        if (scheme.goldPurity === '18K') goldRate = currentRate.gold18K;
+        const goldRate = getRateForPurity(currentRate, scheme.goldPurity);
 
         // Calculate gold weight
         const goldWeight = parseFloat((amount / goldRate).toFixed(4));
@@ -555,7 +542,7 @@ exports.getSchemeSummary = async (req, res, next) => {
         const schemes = await Scheme.find({ user: userId });
 
         // Get current gold rate
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
 
         // Calculate summary
         const summary = {
@@ -577,9 +564,7 @@ exports.getSchemeSummary = async (req, res, next) => {
             summary.totalAmountInvested += scheme.totalAmountPaid;
             summary.totalBonusGold += scheme.bonusGoldWeight;
 
-            let rate = currentRate?.gold22K || 0;
-            if (scheme.goldPurity === '24K') rate = currentRate?.gold24K || 0;
-            if (scheme.goldPurity === '18K') rate = currentRate?.gold18K || 0;
+            const rate = getRateForPurity(currentRate, scheme.goldPurity) || 0;
 
             const value = scheme.totalGoldWeight * rate;
             summary.currentValue += value;

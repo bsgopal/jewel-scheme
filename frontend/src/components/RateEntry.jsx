@@ -24,7 +24,19 @@ export default function RateEntry() {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const handleChange = (field) => (event) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    const value = event.target.value;
+    setForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-calculate 22K and 18K from 24K
+      if (field === "gold24K" && value) {
+        const rate24K = Number(value);
+        updated.gold22K = (rate24K * (22 / 24)).toFixed(2);
+        updated.gold18K = (rate24K * (18 / 24)).toFixed(2);
+      }
+      
+      return updated;
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -32,9 +44,7 @@ export default function RateEntry() {
 
     try {
       await axios.post(`${process.env.REACT_APP_API_URL}/api/admin/gold-rate`, {
-        gold22K: Number(form.gold22K),
         gold24K: Number(form.gold24K),
-        gold18K: Number(form.gold18K),
         silver: Number(form.silver),
       });
 
@@ -71,16 +81,43 @@ export default function RateEntry() {
         <Typography sx={{ textAlign: "center", fontSize: 28, fontWeight: 800, color: "#3e2b16" }}>
           Gold Rate Entry
         </Typography>
-        <Typography sx={{ textAlign: "center", mt: 1, mb: 4, color: "#85684a" }}>
-          Update today&apos;s metal rates for member and branch screens.
+        <Typography sx={{ textAlign: "center", mt: 1, mb: 2, color: "#85684a", fontSize: 14 }}>
+          Enter 24K gold rate • 22K & 18K rates auto-calculate
         </Typography>
+        <Alert severity="info" sx={{ mb: 3, fontSize: 13 }}>
+          22K = 24K × (22/24) | 18K = 24K × (18/24) — Auto-calculated to ensure accuracy
+        </Alert>
 
         <form onSubmit={handleSubmit}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-            <TextField label="22K Gold" type="number" value={form.gold22K} onChange={handleChange("gold22K")} required />
-            <TextField label="24K Gold" type="number" value={form.gold24K} onChange={handleChange("gold24K")} required />
-            <TextField label="18K Gold" type="number" value={form.gold18K} onChange={handleChange("gold18K")} required />
-            <TextField label="Silver" type="number" value={form.silver} onChange={handleChange("silver")} required />
+            <TextField 
+              label="22K Gold (Auto)" 
+              type="number" 
+              value={form.gold22K} 
+              disabled 
+              InputProps={{ style: { color: '#999' } }}
+            />
+            <TextField 
+              label="24K Gold (Enter)" 
+              type="number" 
+              value={form.gold24K} 
+              onChange={handleChange("gold24K")} 
+              required 
+            />
+            <TextField 
+              label="18K Gold (Auto)" 
+              type="number" 
+              value={form.gold18K} 
+              disabled 
+              InputProps={{ style: { color: '#999' } }}
+            />
+            <TextField 
+              label="Silver" 
+              type="number" 
+              value={form.silver} 
+              onChange={handleChange("silver")} 
+              required 
+            />
           </Box>
 
           <Button

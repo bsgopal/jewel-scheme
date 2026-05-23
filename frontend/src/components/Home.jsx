@@ -18,9 +18,9 @@ import {
   Tune,
   WorkspacePremium,
 } from "@mui/icons-material";
-import GroupsIcon from "@mui/icons-material/Groups";
 import Sidemenu from "./Sidemenu";
-import logo from "./renic_logo.png";
+import logo from "./renic-tech-logo.svg";
+import RenicCopyright from "./common/RenicCopyright";
 
 const API = process.env.REACT_APP_API_URL;
 
@@ -157,6 +157,7 @@ export default function Home() {
   const [pending, setPending] = useState([]);
   const [updateNotice, setUpdateNotice] = useState({ open: false, message: "" });
   const role = (localStorage.getItem("role") || "customer").toLowerCase();
+  const isAdmin = role === "admin";
   const name = localStorage.getItem("name") || "Guest";
   const guest = localStorage.getItem("isGuest") === "true";
   const token = localStorage.getItem("token");
@@ -224,7 +225,7 @@ export default function Home() {
 
       if ("Notification" in window && Notification.permission === "granted") {
         try {
-          new Notification("Renic Scheme", { body: message });
+          new Notification("Renic Tech", { body: message });
         } catch (error) {
           // ignore browser notification issues
         }
@@ -235,8 +236,17 @@ export default function Home() {
   }, [homeData]);
 
   const features = useMemo(
-    () => allFeatures.filter((item) => (guest ? item.roles.includes("customer") : item.roles.includes(role))),
-    [guest, role]
+    () =>
+      allFeatures
+        .filter((item) => (guest ? item.roles.includes("customer") : item.roles.includes(role)))
+        .map((item) => {
+          if (isAdmin && item.label === "Join Scheme") {
+            return { ...item, label: "Create Scheme", route: "/newplan" };
+          }
+
+          return item;
+        }),
+    [guest, isAdmin, role]
   );
 
   const rates = Object.keys(homeData.rates || {}).length ? homeData.rates : liveRates;
@@ -257,12 +267,14 @@ export default function Home() {
       value: formatRate(rates.silver),
     },
     {
-      label: guest ? "Access" : role === "agent" ? "Customers" : "Total Savings",
+      label: guest ? "Access" : role === "agent" ? "Customers" : isAdmin ? "Plan Catalog" : "Total Savings",
       value: guest
         ? "Guest session"
         : role === "agent"
           ? `${agentStats?.totalCustomers || 0}`
-          : `Rs ${Number(summary?.totalAmountInvested || 0).toLocaleString("en-IN")}`,
+          : isAdmin
+            ? `${homeData.plans?.length || 0}`
+            : `Rs ${Number(summary?.totalAmountInvested || 0).toLocaleString("en-IN")}`,
     },
     {
       label: guest ? "Plan Access" : role === "agent" ? "Today Collection" : "Active Plans",
@@ -270,7 +282,9 @@ export default function Home() {
         ? "Browse schemes"
         : role === "agent"
           ? `Rs ${Number(agentStats?.todayCollectionAmount || 0).toLocaleString("en-IN")}`
-          : `${summary?.activeSchemes || 0}`,
+          : isAdmin
+            ? `${homeData.plans?.filter((plan) => plan.active !== false).length || 0}`
+            : `${summary?.activeSchemes || 0}`,
     },
   ];
 
@@ -308,7 +322,7 @@ export default function Home() {
           className="home-topbar"
           style={{
             position: "sticky",
-            top: 0,
+            top: "env(safe-area-inset-top, 0px)",
             zIndex: 20,
             marginTop: 8,
             borderRadius: 18,
@@ -340,9 +354,9 @@ export default function Home() {
             >
               ≡
             </button>
-            <img src={logo} alt="Renic" style={{ width: 38, height: 38, objectFit: "contain", borderRadius: 10, background: "#fff", flexShrink: 0 }} />
+            <img src={logo} alt="Renic Tech" style={{ width: 46, height: 38, objectFit: "contain", flexShrink: 0 }} />
             <div style={{ minWidth: 0, fontSize: "clamp(18px, 3.4vw, 24px)", fontWeight: 800, color: "#4b3519", lineHeight: 1.05 }}>
-              Renic Scheme
+              Renic Tech
             </div>
           </div>
 
@@ -362,7 +376,7 @@ export default function Home() {
               flexShrink: 0,
             }}
           >
-            <img src={logo} alt="Profile" style={{ width: 24, height: 24, objectFit: "contain" }} />
+            <img src={logo} alt="Profile" style={{ width: 28, height: 28, objectFit: "contain" }} />
           </button>
         </div>
 
@@ -525,10 +539,10 @@ export default function Home() {
             >
               <div style={{ fontSize: 13, fontWeight: 800, color: "#a9771c", letterSpacing: 1.1, textTransform: "uppercase" }}>Account Snapshot</div>
               <div className="home-snapshot-title" style={{ marginTop: 10, fontSize: "clamp(28px, 5vw, 42px)", lineHeight: 1.04, fontWeight: 800, color: "#3e2b16" }}>
-                {guest ? "Browse current plans and rates." : `${name}, your scheme dashboard is ready.`}
+                {guest ? "Browse current plans and rates." : `${name}, your ${isAdmin ? "admin" : "scheme"} dashboard is ready.`}
               </div>
 
-              {!guest && role !== "agent" && (
+              {!guest && role !== "agent" && !isAdmin && (
                 <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
                   <div style={{ padding: 14, borderRadius: 16, background: "#fff", border: "1px solid rgba(169,126,39,0.12)" }}>
                     <div style={{ fontSize: 12, color: "#8a6b49" }}>Current Value</div>
@@ -540,6 +554,23 @@ export default function Home() {
                     <div style={{ fontSize: 12, color: "#8a6b49" }}>Gold Accumulated</div>
                     <div style={{ marginTop: 6, fontSize: 22, fontWeight: 800, color: "#3e2b16" }}>
                       {Number(summary?.totalGoldWeight || 0).toFixed(4)} g
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!guest && isAdmin && (
+                <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
+                  <div style={{ padding: 14, borderRadius: 16, background: "#fff", border: "1px solid rgba(169,126,39,0.12)" }}>
+                    <div style={{ fontSize: 12, color: "#8a6b49" }}>Available Plans</div>
+                    <div style={{ marginTop: 6, fontSize: 22, fontWeight: 800, color: "#3e2b16" }}>
+                      {homeData.plans?.length || 0}
+                    </div>
+                  </div>
+                  <div style={{ padding: 14, borderRadius: 16, background: "#fff", border: "1px solid rgba(169,126,39,0.12)" }}>
+                    <div style={{ fontSize: 12, color: "#8a6b49" }}>Highlighted Plans</div>
+                    <div style={{ marginTop: 6, fontSize: 22, fontWeight: 800, color: "#3e2b16" }}>
+                      {homeData.plans?.filter((plan) => plan.popular).length || 0}
                     </div>
                   </div>
                 </div>
@@ -675,8 +706,8 @@ export default function Home() {
                   boxShadow: "0 14px 30px rgba(133,104,74,0.06)",
                 }}
               >
-                {offer.image_url ? (
-                  <div style={{ height: 160, background: `center / cover no-repeat url(${getImageUrl(offer.image_url)})` }} />
+                {(offer.banner_url || offer.image_url) ? (
+                  <div style={{ height: 160, background: `center / cover no-repeat url(${getImageUrl(offer.banner_url || offer.image_url)})` }} />
                 ) : null}
                 <div style={{ padding: 18, display: "grid", gap: 8 }}>
                   <div style={{ fontSize: 20, fontWeight: 800, color: "#3e2b16" }}>{offer.title}</div>
@@ -686,6 +717,10 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div style={{ marginTop: 10, paddingBottom: 18 }}>
+          <RenicCopyright color="#8a6b49" />
         </div>
       </div>
 

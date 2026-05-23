@@ -9,6 +9,7 @@ const path = require('path');
 dotenv.config();
 
 const connectDB = require('./config/db');
+const { initializeGoldRateScheduler } = require('./services/goldRateScheduler');
 connectDB();
 
 const app = express();
@@ -119,6 +120,7 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
+    initializeGoldRateScheduler();
     console.log(`💎 JewelScheme API running on port ${PORT}`);
 });
 

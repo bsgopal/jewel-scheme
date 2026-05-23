@@ -1,9 +1,9 @@
-const GoldRate = require('../models/GoldRate');
 const NewArrival = require('../models/NewArrivals');
 const Offer = require('../models/Offer');
 const Banner = require('../models/Banner');
 const PlanCatalog = require('../models/PlanCatalog');
 const SCHEME_PLANS = require('../config/schemePlans');
+const { getCurrentRateWithRefresh } = require('../services/goldRateFetcher');
 
 const normalizeBanner = (banner) => ({
     id: banner._id,
@@ -40,7 +40,7 @@ exports.getHomeContent = async (req, res, next) => {
         }
 
         const [rates, arrivals, offers, banners, catalogPlans] = await Promise.all([
-            GoldRate.getCurrentRate(),
+            getCurrentRateWithRefresh(),
             NewArrival.find().sort({ createdAt: -1 }).limit(8),
             Offer.find(offersQuery).sort({ validTo: 1, createdAt: -1 }).limit(6),
             Banner.find(bannerQuery).sort({ priority: 1, createdAt: -1 }).limit(8),

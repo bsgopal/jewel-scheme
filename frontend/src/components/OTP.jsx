@@ -4,7 +4,8 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import logo from "./renic_logo.png";
+import logo from "./renic-tech-logo.svg";
+import RenicCopyright from "./common/RenicCopyright";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -115,7 +116,7 @@ export default function OTP() {
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
           <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-            <Box component="img" src={logo} alt="Renic" sx={{ width: 96, height: 96, objectFit: "contain" }} />
+            <Box component="img" src={logo} alt="Renic Tech" sx={{ width: 144, height: 78, objectFit: "contain" }} />
           </Box>
 
           <Typography sx={{ textAlign: "center", fontSize: 30, fontWeight: 800, color: "#3e2b16" }}>
@@ -182,6 +183,10 @@ export default function OTP() {
           >
             {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP"}
           </Button>
+
+          <Box sx={{ mt: 3 }}>
+            <RenicCopyright compact />
+          </Box>
         </motion.div>
       </Box>
     </Box>

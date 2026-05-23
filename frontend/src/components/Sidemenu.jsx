@@ -11,7 +11,8 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PriceCheckIcon from "@mui/icons-material/PriceCheck";
 import GroupsIcon from "@mui/icons-material/Groups";
-import logo from "./renic_logo.png";
+import logo from "./renic-tech-logo.svg";
+import RenicCopyright from "./common/RenicCopyright";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -68,15 +69,15 @@ export default function Sidemenu({ open, onClose }) {
       <Box sx={{ p: 3, borderBottom: "1px solid rgba(169,126,39,0.12)" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box
-            component="img" src={logo} alt="Renic"
-            sx={{ width: 68, height: 68, objectFit: "contain", borderRadius: "18px", bgcolor: "#fff" }}
+            component="img" src={logo} alt="Renic Tech"
+            sx={{ width: 88, height: 52, objectFit: "contain" }}
           />
           <Box>
             <Typography sx={{ fontSize: 22, fontWeight: 800, color: "#4b3519" }}>
-              Renic Scheme
+              Renic Tech
             </Typography>
             <Typography sx={{ color: "#85684a", fontSize: 13 }}>
-              Professional jewellery savings app
+              Jewellery savings platform
             </Typography>
           </Box>
         </Box>
@@ -126,6 +127,9 @@ export default function Sidemenu({ open, onClose }) {
             primaryTypographyProps={{ fontWeight: 700, color: "#7c3428" }}
           />
         </ListItemButton>
+        <Box sx={{ mt: 2, px: 0.5 }}>
+          <RenicCopyright align="left" compact color="#85684a" />
+        </Box>
       </Box>
     </Drawer>
   );

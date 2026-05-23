@@ -1,22 +1,35 @@
 const GoldRate = require('../models/GoldRate');
+const {
+    fetchAndStoreLiveRate,
+    getCurrentRateWithRefresh,
+    getRateForPurity,
+    isRateFresh
+} = require('../services/goldRateFetcher');
 
 // @desc    Get current gold rate
 // @route   GET /api/gold-rate/current
 // @access  Public
 exports.getCurrentRate = async (req, res, next) => {
     try {
-        const rate = await GoldRate.getCurrentRate();
+        const rate = await getCurrentRateWithRefresh();
 
         if (!rate) {
             return res.status(404).json({
                 success: false,
-                message: 'Gold rate not available'
+                message: 'Gold rate not available. Please check live API configuration.'
             });
         }
 
         res.status(200).json({
             success: true,
-            data: rate
+            data: rate,
+            fresh: isRateFresh(rate),
+            meta: {
+                rateDate: rate.date,
+                fetchedAt: rate.fetchedAt || rate.updatedAt,
+                providerUpdatedAt: rate.providerUpdatedAt || null,
+                source: rate.source
+            }
         });
 
     } catch (error) {
@@ -84,7 +97,7 @@ exports.calculateGoldWeight = async (req, res, next) => {
             });
         }
 
-        const rate = await GoldRate.getCurrentRate();
+        const rate = await getCurrentRateWithRefresh();
 
         if (!rate) {
             return res.status(404).json({
@@ -93,17 +106,7 @@ exports.calculateGoldWeight = async (req, res, next) => {
             });
         }
 
-        let goldRate;
-        switch (purity.toUpperCase()) {
-            case '24K':
-                goldRate = rate.gold24K;
-                break;
-            case '18K':
-                goldRate = rate.gold18K;
-                break;
-            default:
-                goldRate = rate.gold22K;
-        }
+        const goldRate = getRateForPurity(rate, purity);
 
         const goldWeight = parseFloat((parseFloat(amount) / goldRate).toFixed(4));
 
@@ -114,7 +117,8 @@ exports.calculateGoldWeight = async (req, res, next) => {
                 purity: purity.toUpperCase(),
                 goldRate,
                 goldWeight,
-                rateDate: rate.date
+                rateDate: rate.date,
+                rateFresh: isRateFresh(rate)
             }
         });
 
@@ -150,17 +154,42 @@ exports.getRateStats = async (req, res, next) => {
             }
         ]);
 
-        const currentRate = await GoldRate.getCurrentRate();
+        const currentRate = await getCurrentRateWithRefresh();
 
         res.status(200).json({
             success: true,
             data: {
                 currentRate,
                 stats: stats[0] || {},
-                period: `Last ${days} days`
+                period: `Last ${days} days`,
+                rateFresh: isRateFresh(currentRate)
             }
         });
 
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Manually refresh gold rates from live API
+// @route   POST /api/gold-rate/refresh
+// @access  Public
+exports.refreshRates = async (req, res, next) => {
+    try {
+        const updatedRate = await fetchAndStoreLiveRate();
+
+        if (!updatedRate) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch live rates. Please check the configured provider API key and API availability.'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Gold rates refreshed successfully',
+            data: updatedRate
+        });
     } catch (error) {
         next(error);
     }

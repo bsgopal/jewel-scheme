@@ -1,7 +1,10 @@
 const Redemption = require('../models/Redemption');
 const Scheme = require('../models/Scheme');
-const GoldRate = require('../models/GoldRate');
 const User = require('../models/User');
+const {
+    getCurrentRateWithRefresh,
+    getRateForPurity
+} = require('../services/goldRateFetcher');
 
 // @desc    Create redemption request
 // @route   POST /api/redemptions
@@ -45,8 +48,8 @@ exports.createRedemption = async (req, res, next) => {
         }
 
         // Get current gold rate if not provided
-        const currentRate = await GoldRate.getCurrentRate();
-        const rate = goldRateAtRedemption || currentRate?.gold22K;
+        const currentRate = await getCurrentRateWithRefresh();
+        const rate = goldRateAtRedemption || getRateForPurity(currentRate, scheme.goldPurity);
         if (!rate) {
             return res.status(400).json({ success: false, message: 'Gold rate not available' });
         }

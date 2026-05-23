@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Typography, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -11,6 +11,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getBackTarget, getCurrentRoute } from "../utils/navigation";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const fallbackPlanBanner = `${process.env.PUBLIC_URL}/images/banner1.png`;
+
+const getResolvedImageUrl = (plan) => {
+  const raw = plan?.banner_path || plan?.imageUrl || plan?.image_url || plan?.bannerUrl || "";
+
+  if (!raw) return fallbackPlanBanner;
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+
+  return `${API_BASE_URL.replace(/\/$/, "")}${raw.startsWith("/") ? "" : "/"}${raw}`;
+};
 
 export default function NewPlan() {
   const location = useLocation();
@@ -26,7 +36,7 @@ export default function NewPlan() {
   const currentRoute = getCurrentRoute(location);
   const backTarget = getBackTarget(location, "/Home");
 
-  const fetchPlans = async () => {
+  const fetchPlans = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/plan-catalog`, {
         params: { include_all: canManagePlans ? "true" : "false" },
@@ -36,11 +46,11 @@ export default function NewPlan() {
     } catch (error) {
       setPlans([]);
     }
-  };
+  }, [canManagePlans]);
 
   useEffect(() => {
     fetchPlans();
-  }, [canManagePlans]);
+  }, [fetchPlans]);
 
   const filteredPlans = useMemo(() => {
     return plans.filter((plan) => {
@@ -93,14 +103,12 @@ export default function NewPlan() {
   };
 
   const getBannerUrl = (plan) => {
-    if (!plan?.banner_path) return `${process.env.PUBLIC_URL}/plan-placeholder.jpg`;
-    if (plan.banner_path.startsWith("http")) return plan.banner_path;
-    return `${API_BASE_URL}${plan.banner_path}`;
+    return getResolvedImageUrl(plan);
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAF5F0", fontFamily: "'Montserrat', sans-serif", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "0 16px", height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100 }}>
+      <div className="catalog-header" style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(54px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100, gap: 10 }}>
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}>
           <ArrowBackIcon style={{ color: "#FFD700", fontSize: 20 }} />
         </motion.button>
@@ -113,17 +121,22 @@ export default function NewPlan() {
         </div>
 
         {canManagePlans ? (
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setSelectionMode((prev) => !prev); setSelectedPlans([]); }} style={{ background: selectionMode ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-            <ChecklistIcon style={{ color: "#FFD700", fontSize: 16 }} />
-            <span style={{ color: "#FFD700", fontSize: "0.6rem", fontWeight: 700 }}>{selectionMode ? "Cancel" : "Select"}</span>
-          </motion.button>
+          <div className="catalog-header-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate("/createnewplan", { state: { backTo: currentRoute } })} style={{ background: "linear-gradient(135deg, #FFD700, #E8A000)", border: "none", borderRadius: 10, padding: "7px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ color: "#3B0000", fontSize: "0.6rem", fontWeight: 800 }}>New</span>
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setSelectionMode((prev) => !prev); setSelectedPlans([]); }} style={{ background: selectionMode ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <ChecklistIcon style={{ color: "#FFD700", fontSize: 16 }} />
+              <span style={{ color: "#FFD700", fontSize: "0.6rem", fontWeight: 700 }}>{selectionMode ? "Cancel" : "Select"}</span>
+            </motion.button>
+          </div>
         ) : (
           <div style={{ width: 60 }} />
         )}
       </div>
 
       <div style={{ padding: "16px 14px 8px", display: "grid", gap: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.8fr", gap: 12 }}>
+        <div className="catalog-toolbar" style={{ display: "grid", gridTemplateColumns: "1.5fr 0.8fr", gap: 12 }}>
           <TextField
             placeholder="Search plan name or group code"
             value={search}
@@ -154,7 +167,12 @@ export default function NewPlan() {
       <div style={{ padding: "18px 14px 40px" }}>
         {filteredPlans.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: 18, border: "1px solid rgba(139,26,26,0.1)", boxShadow: "0 4px 20px rgba(139,26,26,0.07)" }}>
-            <div style={{ fontSize: "0.85rem", color: "#999" }}>No plans available at the moment</div>
+            <div style={{ fontSize: "0.85rem", color: "#999" }}>{canManagePlans ? "No plans created yet" : "No plans available at the moment"}</div>
+            {canManagePlans ? (
+              <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate("/createnewplan", { state: { backTo: currentRoute } })} style={{ marginTop: 18, height: 42, padding: "0 18px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #7B0000, #C0392B)", color: "#FFD700", fontWeight: 800, fontSize: "0.74rem", letterSpacing: "0.08em", cursor: "pointer" }}>
+                Create New Plan
+              </motion.button>
+            ) : null}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
@@ -179,7 +197,7 @@ export default function NewPlan() {
                       alt={plan.plan_name}
                       onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = `${process.env.PUBLIC_URL}/plan-placeholder.jpg`;
+                        event.currentTarget.src = fallbackPlanBanner;
                       }}
                       whileHover={{ scale: 1.04 }}
                       transition={{ duration: 0.35 }}

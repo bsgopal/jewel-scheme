@@ -18,7 +18,8 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import logo from "./renic_logo.png";
+import logo from "./renic-tech-logo.svg";
+import RenicCopyright from "./common/RenicCopyright";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -121,19 +122,21 @@ export default function Login() {
               <Box
                 component="img"
                 src={logo}
-                alt="Renic"
-                sx={{ width: 88, height: 88, objectFit: "contain", borderRadius: "20px", bgcolor: "#fff" }}
+                alt="Renic Tech"
+                sx={{ width: 132, height: 72, objectFit: "contain" }}
               />
               <Box>
                 <Typography sx={{ fontSize: 30, fontWeight: 800, color: "#5a3916", letterSpacing: 0.5 }}>
-                  Renic Jewellery
+                  Renic Tech
                 </Typography>
                 <Typography sx={{ color: "#8a6b49", fontSize: 14 }}>
                   Scheme collections, branch-ready workflows, and customer-friendly gold savings.
                 </Typography>
               </Box>
             </Box>
-
+            <Box sx={{ mt: 4 }}>
+              <RenicCopyright align="left" compact />
+            </Box>
           </Box>
 
         </Box>

@@ -41,6 +41,9 @@ export default function OfferCard({ offer }) {
         <div style={{ height: 180, position: "relative", overflow: "hidden" }}>
           <img
             src={fullImageUrl} alt={offer.title}
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
           {/* gradient overlay */}
