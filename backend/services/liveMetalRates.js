@@ -58,8 +58,22 @@ const fetchLiveMetalRates = async () => {
         getUsdInrRate(),
     ]);
 
+    console.log('[liveMetalRates] API Response - Gold price (USD/troy oz):', gold.price);
+    console.log('[liveMetalRates] API Response - Silver price (USD/troy oz):', silver.price);
+    console.log('[liveMetalRates] USD to INR rate:', usdInr);
+    console.log('[liveMetalRates] TROY_OUNCE_GRAMS constant:', TROY_OUNCE_GRAMS);
+
     const gold24K = roundRate((Number(gold.price) * usdInr) / TROY_OUNCE_GRAMS);
-    const silverRate = roundRate((Number(silver.price) * usdInr) / TROY_OUNCE_GRAMS);
+    const silverRate = roundRate((Number(silver.price) * usdInr) / TROY_OUNCE_GRAMS / 1000);
+
+    console.log('[liveMetalRates] Calculated Gold 24K (INR/gram):', gold24K);
+    console.log('[liveMetalRates] Calculated Silver (INR/gram):', silverRate);
+    console.log('[liveMetalRates] Calculation breakdown for Silver:');
+    console.log('  - Silver price (USD/troy oz):', Number(silver.price));
+    console.log('  - USD to INR:', usdInr);
+    console.log('  - Silver price in INR/troy oz:', Number(silver.price) * usdInr);
+    console.log('  - Divided by TROY_OUNCE_GRAMS:', (Number(silver.price) * usdInr) / TROY_OUNCE_GRAMS);
+    console.log('  - After rounding:', silverRate);
 
     if (!gold24K || !silverRate) {
         throw new Error('Live metal prices unavailable');

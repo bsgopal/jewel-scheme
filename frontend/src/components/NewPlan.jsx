@@ -108,15 +108,15 @@ export default function NewPlan() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAF5F0", fontFamily: "'Montserrat', sans-serif", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div className="catalog-header" style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(54px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100, gap: 10 }}>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}>
-          <ArrowBackIcon style={{ color: "#FFD700", fontSize: 20 }} />
+      <div className="catalog-header" style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(54px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid rgba(255,200,80,0.4)", boxShadow: "0 6px 24px rgba(100,0,0,0.4)", position: "sticky", top: 0, zIndex: 100, gap: 10 }}>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,200,80,0.4)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}>
+          <ArrowBackIcon style={{ color: "#FFD700", fontSize: 22 }} />
         </motion.button>
 
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#FFD700", lineHeight: 1 }}>Gold Scheme Plans</div>
-          <div style={{ fontSize: "0.42rem", color: "rgba(255,220,130,0.65)", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-            {canManagePlans ? "Admin plan management" : "Plan catalog"}
+          <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "#FFD700", lineHeight: 1, letterSpacing: "0.5px" }}>SCHEME PLANS</div>
+          <div style={{ fontSize: "0.5rem", color: "rgba(255,220,130,0.8)", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: "2px", fontWeight: 600 }}>
+            {canManagePlans ? "Admin Management" : "Browse & Join"}
           </div>
         </div>
 

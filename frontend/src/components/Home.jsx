@@ -20,6 +20,7 @@ import logo from "./renic-tech-logo.svg";
 import RenicCopyright from "./common/RenicCopyright";
 import SmoothCarousel from "./common/SmoothCarousel";
 import SmoothGridCarousel from "./common/SmoothGridCarousel";
+import NotificationCenter from "./common/NotificationCenter";
 import { getStoredRole, hasRequiredRole, isAdminLike } from "../utils/permissions";
 import { getImageUrl } from "../utils/imageUrl";
 
@@ -403,6 +404,8 @@ export default function Home() {
           >
             <img src={logo} alt="Profile" style={{ width: 28, height: 28, objectFit: "contain" }} />
           </button>
+
+          <NotificationCenter />
         </div>
 
         <Sidemenu open={menuOpen} onClose={() => setMenuOpen(false)} />

@@ -113,8 +113,16 @@ const fetchMetalRatesFromApi = async () => {
         throw new Error('Invalid metal API response');
     }
 
+    console.log('[goldRateFetcher] API Response - Gold (INR/troy oz):', goldInrPerTroyOunce);
+    console.log('[goldRateFetcher] API Response - Silver (INR/troy oz):', silverInrPerTroyOunce);
+    console.log('[goldRateFetcher] GRAMS_PER_TROY_OUNCE constant:', GRAMS_PER_TROY_OUNCE);
+
     const gold24K = roundRate((goldInrPerTroyOunce / GRAMS_PER_TROY_OUNCE) * INDIA_RETAIL_PREMIUM);
-    const silver = roundRate(silverInrPerTroyOunce / GRAMS_PER_TROY_OUNCE);
+    const silver = roundRate((silverInrPerTroyOunce / GRAMS_PER_TROY_OUNCE) / 1000);
+
+    console.log('[goldRateFetcher] Calculated Gold 24K (INR/gram):', gold24K);
+    console.log('[goldRateFetcher] Calculated Silver (INR/gram):', silver);
+    console.log('[goldRateFetcher] INDIA_RETAIL_PREMIUM:', INDIA_RETAIL_PREMIUM);
 
     if (!gold24K || !silver) {
         throw new Error('Calculated gold or silver rate is invalid');
@@ -207,6 +215,14 @@ const fetchAndStoreLiveRate = async () => {
         const liveRate = await fetchLiveRateFromProvider();
         const today = getStartOfIstDay();
 
+        console.log('[goldRateFetcher] Live rate fetched:', {
+            gold24K: liveRate.gold24K,
+            gold22K: liveRate.gold22K,
+            gold18K: liveRate.gold18K,
+            silver: liveRate.silver,
+            source: liveRate.source
+        });
+
         const existingRate = await GoldRate.findOne({
             date: {
                 $gte: today,
@@ -228,13 +244,26 @@ const fetchAndStoreLiveRate = async () => {
             notes: `Live refresh at ${liveRate.fetchedAt.toISOString()}`
         };
 
+        console.log('[goldRateFetcher] Rate data to be stored:', rateData);
+
         if (existingRate) {
             existingRate.set(rateData);
-            return existingRate.save();
+            const saved = await existingRate.save();
+            console.log('[goldRateFetcher] Updated existing rate in DB:', {
+                silver: saved.silver,
+                gold24K: saved.gold24K
+            });
+            return saved;
         }
 
-        return GoldRate.create(rateData);
+        const created = await GoldRate.create(rateData);
+        console.log('[goldRateFetcher] Created new rate in DB:', {
+            silver: created.silver,
+            gold24K: created.gold24K
+        });
+        return created;
     } catch (error) {
+        console.error('[goldRateFetcher] Error fetching and storing live rate:', error.message);
         // Failed to fetch live gold rates
         return null;
     }

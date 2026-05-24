@@ -100,28 +100,33 @@ function SectionCard({ title, icon: Icon, children }) {
         style={{
           background: "#FFFFFF",
           borderRadius: 18,
-          border: "1px solid rgba(139,26,26,0.1)",
-          boxShadow: "0 4px 20px rgba(139,26,26,0.06)",
-          padding: "20px 18px",
-          marginBottom: 16,
+          border: "1.5px solid rgba(139,26,26,0.15)",
+          boxShadow: "0 6px 24px rgba(139,26,26,0.08)",
+          padding: "22px 20px",
+          marginBottom: 18,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+        {/* Decorative top border */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: "linear-gradient(90deg, #8B0000, #C0392B)" }} />
+        
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <div
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: "linear-gradient(135deg, rgba(139,26,26,0.12), rgba(139,26,26,0.04))",
-              border: "1px solid rgba(139,26,26,0.2)",
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #8B0000, #C0392B)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: "0 3px 12px rgba(139,26,26,0.2)",
             }}
           >
-            <Icon sx={{ fontSize: 17, color: "#8B0000" }} />
+            <Icon sx={{ fontSize: 19, color: "#FFD700" }} />
           </div>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#3B0000", letterSpacing: "0.04em" }}>{title}</span>
+          <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#3B0000", letterSpacing: "0.06em", textTransform: "uppercase" }}>{title}</span>
         </div>
         {children}
       </div>
@@ -147,6 +152,25 @@ export default function CreateNewPlan() {
   const [uploading, setUploading] = useState(false);
   const [goldRate, setGoldRate] = useState(0);
   const [planData, setPlanData] = useState(defaultPlanData);
+
+  // Restore form data from sessionStorage on mount
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('planFormData');
+    if (savedData && !id) {
+      try {
+        setPlanData(JSON.parse(savedData));
+      } catch (e) {
+        console.error('Failed to restore form data:', e);
+      }
+    }
+  }, [id]);
+
+  // Save form data to sessionStorage whenever it changes
+  useEffect(() => {
+    if (!id) {
+      sessionStorage.setItem('planFormData', JSON.stringify(planData));
+    }
+  }, [planData, id]);
 
   useEffect(() => {
     axios
@@ -305,6 +329,8 @@ export default function CreateNewPlan() {
       });
 
       setTimeout(() => navigate("/newplan"), 900);
+      // Clear saved form data on successful submission
+      sessionStorage.removeItem('planFormData');
     } catch (error) {
       setSnackbar({ open: true, message: error.response?.data?.message || "Unable to save plan.", severity: "error" });
     } finally {
@@ -324,13 +350,13 @@ export default function CreateNewPlan() {
         )}
       </AnimatePresence>
 
-      <div style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(56px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", gap: 12, borderBottom: "1.5px solid rgba(255,200,80,0.3)", boxShadow: "0 3px 16px rgba(100,0,0,0.35)", position: "sticky", top: 0, zIndex: 100 }}>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center" }}>
-          <ArrowBackIcon style={{ color: "#FFD700", fontSize: 20 }} />
+      <div style={{ background: "linear-gradient(135deg, #7B0000, #A50000)", padding: "calc(env(safe-area-inset-top, 0px) + 6px) 16px 8px", minHeight: "calc(56px + env(safe-area-inset-top, 0px))", display: "flex", alignItems: "center", gap: 12, borderBottom: "2px solid rgba(255,200,80,0.4)", boxShadow: "0 6px 24px rgba(100,0,0,0.4)", position: "sticky", top: 0, zIndex: 100 }}>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(backTarget)} style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,200,80,0.4)", borderRadius: 10, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center", transition: "all 0.2s" }}>
+          <ArrowBackIcon style={{ color: "#FFD700", fontSize: 22 }} />
         </motion.button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#FFD700", lineHeight: 1 }}>{id ? "Edit Plan" : "Create Plan"}</div>
-          <div style={{ fontSize: "0.46rem", color: "rgba(255,220,130,0.74)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Live gold rate: {liveRateLabel}</div>
+          <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "#FFD700", lineHeight: 1, letterSpacing: "0.5px" }}>{id ? "EDIT PLAN" : "CREATE PLAN"}</div>
+          <div style={{ fontSize: "0.5rem", color: "rgba(255,220,130,0.8)", letterSpacing: "0.2em", textTransform: "uppercase", marginTop: "2px", fontWeight: 600 }}>Live gold rate: {liveRateLabel}</div>
         </div>
       </div>
 
@@ -338,7 +364,7 @@ export default function CreateNewPlan() {
         <form onSubmit={handleSubmit}>
           <SectionCard title="Plan Identity" icon={DiamondOutlinedIcon}>
             <FormGrid>
-              <TextField fullWidth label="Group Code *" value={planData.groupCode} onChange={(e) => handleInput("groupCode", e.target.value)} required sx={fieldSx} size="small" />
+              <TextField fullWidth label="Group Code" value={planData.groupCode} onChange={(e) => handleInput("groupCode", e.target.value)} sx={fieldSx} size="small" />
               <TextField select fullWidth label="Status" value={planData.status} onChange={(e) => handleInput("status", e.target.value)} sx={fieldSx} size="small" SelectProps={{ MenuProps: menuProps }}>
                 <MenuItem value="Active">Active</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
@@ -346,11 +372,11 @@ export default function CreateNewPlan() {
               <Box sx={{ gridColumn: { xs: "1 / -1", sm: "1 / -1" } }}>
                 <TextField fullWidth label="Plan Name *" value={planData.planName} onChange={(e) => handleInput("planName", e.target.value)} required sx={fieldSx} size="small" />
               </Box>
+              <TextField select fullWidth label="Metal Type *" value={planData.jewelleryType} onChange={(e) => handleInput("jewelleryType", e.target.value)} required sx={fieldSx} size="small" SelectProps={{ MenuProps: menuProps }}>
+                {["Gold", "Silver", "Platinum", "Diamond"].map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}
+              </TextField>
               <TextField select fullWidth label="Plan Type" value={planData.planType} onChange={(e) => handleInput("planType", e.target.value)} sx={fieldSx} size="small" SelectProps={{ MenuProps: menuProps }}>
                 {["Monthly", "Quarterly", "Yearly"].map((type) => <MenuItem key={type} value={type}>{type}</MenuItem>)}
-              </TextField>
-              <TextField select fullWidth label="Jewellery Type" value={planData.jewelleryType} onChange={(e) => handleInput("jewelleryType", e.target.value)} sx={fieldSx} size="small" SelectProps={{ MenuProps: menuProps }}>
-                {["All", "Ring", "Necklace", "Bracelet", "Earrings", "Bangle"].map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}
               </TextField>
             </FormGrid>
           </SectionCard>

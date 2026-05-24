@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Scheme = require('../models/Scheme');
 const Payment = require('../models/Payment');
 const WalletTransaction = require('../models/WalletTransaction');
+const notificationService = require('../services/notificationService');
 const {
     getCurrentRateWithRefresh,
     getRateForPurity
@@ -263,6 +264,14 @@ exports.payInstallmentFromWallet = async (req, res, next) => {
             remarks: `Payment of Rs ${effectiveAmount} for ${scheme.schemeName} (${isFlexible ? 'flexible' : 'installment'})`,
             createdBy: req.user._id
         });
+
+        // Send payment success notification
+        await notificationService.sendPaymentSuccessNotification(
+            targetUserId,
+            scheme._id,
+            effectiveAmount,
+            goldWeight
+        );
 
         res.status(200).json({
             success: true,

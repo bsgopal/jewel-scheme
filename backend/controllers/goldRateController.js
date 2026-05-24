@@ -20,6 +20,14 @@ exports.getCurrentRate = async (req, res, next) => {
             });
         }
 
+        console.log('[goldRateController] getCurrentRate - Returning to frontend:', {
+            silver: rate.silver,
+            gold24K: rate.gold24K,
+            gold22K: rate.gold22K,
+            source: rate.source,
+            date: rate.date
+        });
+
         res.status(200).json({
             success: true,
             data: rate,

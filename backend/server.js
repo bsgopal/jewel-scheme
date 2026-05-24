@@ -10,6 +10,7 @@ dotenv.config();
 
 const connectDB = require('./config/db');
 const { initializeGoldRateScheduler } = require('./services/goldRateScheduler');
+const { initPaymentReminderCron, runImmediatePaymentCheck } = require('./services/paymentReminderCron');
 connectDB();
 
 const app = express();
@@ -91,6 +92,7 @@ app.use('/api/plan-catalog', require('./routes/planCatalogRoutes'));
 app.use('/api/wallet', require('./routes/walletRoutes'));
 app.use('/api/agent', require('./routes/agentRoutes'));
 app.use('/api/agents', require('./routes/Agentmanageroutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({
@@ -120,6 +122,9 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
     initializeGoldRateScheduler();
+    initPaymentReminderCron();
+    runImmediatePaymentCheck();
+    console.log(`🚀 Server running on port ${PORT}`);
 });
 
 process.on('unhandledRejection', (err) => {
