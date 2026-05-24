@@ -2,6 +2,28 @@ const User = require('../models/User');
 const AgentAssignment = require('../models/AgentAssignment');
 const Scheme = require('../models/Scheme');
 
+// ─── GET /api/agents/areas ───────────────────────────────────────────────────
+// Get all unique areas/cities from customers
+exports.getAvailableAreas = async (req, res, next) => {
+  try {
+    const areas = await User.aggregate([
+      { $match: { role: 'customer' } },
+      { $group: { _id: null, areas: { $addToSet: '$address.area' }, cities: { $addToSet: '$address.city' } } },
+      { $project: { _id: 0, areas: 1, cities: 1 } }
+    ]);
+
+    const allLocations = new Set();
+    if (areas[0]) {
+      areas[0].areas?.forEach(a => a && allLocations.add(a));
+      areas[0].cities?.forEach(c => c && allLocations.add(c));
+    }
+
+    res.status(200).json({ success: true, data: Array.from(allLocations).sort() });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── GET /api/agents ──────────────────────────────────────────────────────────
 // Returns all users with role = 'agent', with their assigned customer count
 exports.getAllAgents = async (req, res, next) => {
@@ -171,11 +193,13 @@ exports.assignCustomers = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'Area is required for area-wise assignment.' });
       }
 
+      // Search for customers in the specified area (case-insensitive, partial match)
       const areaCustomers = await User.find({
         role: 'customer',
         $or: [
-          { 'address.area': { $regex: `^${area}$`, $options: 'i' } },
-          { 'address.city': { $regex: `^${area}$`, $options: 'i' } }
+          { 'address.area': { $regex: area, $options: 'i' } },
+          { 'address.city': { $regex: area, $options: 'i' } },
+          { 'address.state': { $regex: area, $options: 'i' } }
         ]
       }).select('_id');
 

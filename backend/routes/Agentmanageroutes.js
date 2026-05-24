@@ -9,10 +9,13 @@ const {
   getAgentCustomers,
   assignCustomers,
   removeCustomer,
+  getAvailableAreas,
 } = require('../controllers/Agentmanagecontroller');
 
 // All routes below require admin only
 router.use(protect, authorize('admin'));
+
+router.get('/areas', getAvailableAreas);  // GET /api/agents/areas
 
 router.get('/',    getAllAgents);   // GET  /api/agents
 router.post('/',   createAgent);   // POST /api/agents

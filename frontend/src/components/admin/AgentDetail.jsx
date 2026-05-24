@@ -38,6 +38,7 @@ export default function AgentDetail() {
   const [assignmentArea, setAssignmentArea] = useState("");
   const [assignmentPlan, setAssignmentPlan] = useState("");
   const [availablePlans, setAvailablePlans] = useState([]);
+  const [availableAreas, setAvailableAreas] = useState([]);
   const [selected, setSelected]             = useState([]);   // ids to assign
   const [assigning, setAssigning]           = useState(false);
   const [removingId, setRemovingId]         = useState(null);
@@ -69,23 +70,31 @@ export default function AgentDetail() {
 
   useEffect(() => { fetchAssigned(); }, [id]);
 
-  // ── Open assign modal → fetch all customers ───────────────────────────────
+  // ── Open assign modal → fetch all customers + areas + plans ──────────────
   const openAssignModal = async () => {
     setModalOpen(true);
     setSelected([]);
     setAssignSearch("");
+    setAssignmentArea("");
+    setAssignmentPlan("");
+    setAssignmentMode("customer");
     setLoadingAll(true);
     try {
-      const res = await axios.get(`${API}/api/admin/users?role=customer`, { headers: authHeaders() });
-      const plansRes = await axios.get(`${API}/api/admin/schemes?limit=200`, { headers: authHeaders() });
+      const [res, plansRes, areasRes] = await Promise.all([
+        axios.get(`${API}/api/admin/users?role=customer`, { headers: authHeaders() }),
+        axios.get(`${API}/api/admin/schemes?limit=200`, { headers: authHeaders() }),
+        axios.get(`${API}/api/agents/areas`, { headers: authHeaders() }),
+      ]);
       const all = res.data.data || res.data || [];
       const planList = plansRes.data.data || [];
+      const areaList = areasRes.data.data || [];
       // Exclude already assigned
       const assignedIds = new Set(assignedCustomers.map(c => c._id || c.id));
       setAllCustomers(all.filter(c => !assignedIds.has(c._id || c.id)));
       setAvailablePlans(planList);
+      setAvailableAreas(areaList);
     } catch {
-      setSnackbar({ open: true, message: "Failed to load customers", severity: "error" });
+      setSnackbar({ open: true, message: "Failed to load data", severity: "error" });
     } finally {
       setLoadingAll(false);
     }
@@ -477,7 +486,11 @@ export default function AgentDetail() {
                     Assign Customers
                   </div>
                   <div style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-                    {selected.length > 0 ? `${selected.length} selected` : "Select one or more customers"}
+                    {assignmentMode === "area"
+                      ? (assignmentArea.trim() ? `Area: ${assignmentArea.trim()}` : "Enter an area or city")
+                      : assignmentMode === "plan"
+                        ? (assignmentPlan ? "Plan selected" : "Choose a scheme/plan")
+                        : selected.length > 0 ? `${selected.length} selected` : "Select one or more customers"}
                   </div>
                 </div>
                 <button
@@ -519,12 +532,42 @@ export default function AgentDetail() {
                 </div>
 
                 {assignmentMode === "area" && (
-                  <input
-                    value={assignmentArea}
-                    onChange={(e) => setAssignmentArea(e.target.value)}
-                    placeholder="Enter area or city"
-                    style={{ width: "100%", boxSizing: "border-box", marginBottom: 10, border: "1px solid rgba(169,126,39,0.18)", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", background: "#fffaf5", color: "#3e2b16", outline: "none" }}
-                  />
+                  <div style={{ marginBottom: 10 }}>
+                    <input
+                      value={assignmentArea}
+                      onChange={(e) => setAssignmentArea(e.target.value)}
+                      placeholder="Type or pick an area / city…"
+                      style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(169,126,39,0.18)", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", background: "#fffaf5", color: "#3e2b16", outline: "none" }}
+                    />
+                    {availableAreas.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                        {availableAreas
+                          .filter(a => !assignmentArea || a.toLowerCase().includes(assignmentArea.toLowerCase()))
+                          .slice(0, 12)
+                          .map(area => (
+                            <button
+                              key={area}
+                              onClick={() => setAssignmentArea(area)}
+                              style={{
+                                padding: "5px 12px", borderRadius: 999, fontSize: "0.68rem",
+                                fontWeight: 700, cursor: "pointer",
+                                border: assignmentArea === area ? "none" : "1px solid rgba(169,126,39,0.25)",
+                                background: assignmentArea === area ? "linear-gradient(135deg,#c9a227,#a9771c)" : "#fffaf5",
+                                color: assignmentArea === area ? "#fff" : "#8a6b49",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              {area}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {!loadingAll && availableAreas.length === 0 && (
+                      <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 6 }}>
+                        No area data found — customers may not have address filled.
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {assignmentMode === "plan" && (
@@ -587,14 +630,124 @@ export default function AgentDetail() {
                   <div style={{ textAlign: "center", padding: "40px 0" }}>
                     <CircularProgress sx={{ color: "#a9771c" }} size={28} />
                   </div>
+
+                ) : assignmentMode === "area" ? (
+                  // ── Area preview ──────────────────────────────────────────
+                  (() => {
+                    const trimmedArea = assignmentArea.trim().toLowerCase();
+                    const areaMatched = trimmedArea
+                      ? allCustomers.filter(c =>
+                          (c.address?.area  || "").toLowerCase().includes(trimmedArea) ||
+                          (c.address?.city  || "").toLowerCase().includes(trimmedArea) ||
+                          (c.address?.state || "").toLowerCase().includes(trimmedArea) ||
+                          (c.address?.pincode || "").toLowerCase().includes(trimmedArea)
+                        )
+                      : [];
+                    return (
+                      <div>
+                        {!trimmedArea ? (
+                          <div style={{ textAlign: "center", padding: "36px 20px" }}>
+                            <div style={{ fontSize: "2rem", marginBottom: 8 }}>🔍</div>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#8a6b49" }}>Type or pick an area above</div>
+                            <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 4 }}>Matching customers will appear here</div>
+                          </div>
+                        ) : areaMatched.length === 0 ? (
+                          <div style={{ textAlign: "center", padding: "36px 20px" }}>
+                            <div style={{ fontSize: "2rem", marginBottom: 8 }}>📭</div>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#8a6b49" }}>No customers found in "{assignmentArea.trim()}"</div>
+                            <div style={{ fontSize: "0.68rem", color: "#bbb", marginTop: 4 }}>Try a different area name or check customer addresses</div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Count banner */}
+                            <div style={{
+                              display: "flex", alignItems: "center", gap: 10,
+                              background: "linear-gradient(135deg,rgba(201,162,39,0.12),rgba(169,119,28,0.08))",
+                              border: "1px solid rgba(169,126,39,0.2)",
+                              borderRadius: 12, padding: "10px 14px", marginBottom: 10,
+                            }}>
+                              <div style={{
+                                width: 36, height: 36, borderRadius: 10,
+                                background: "linear-gradient(135deg,#c9a227,#a9771c)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontWeight: 900, fontSize: "1rem", color: "#fff", flexShrink: 0,
+                              }}>{areaMatched.length}</div>
+                              <div>
+                                <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#3e2b16" }}>
+                                  {areaMatched.length} customer{areaMatched.length > 1 ? "s" : ""} in "{assignmentArea.trim()}"
+                                </div>
+                                <div style={{ fontSize: "0.6rem", color: "#8a6b49", marginTop: 1 }}>All will be assigned to this agent</div>
+                              </div>
+                            </div>
+
+                            {/* Customer rows */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {areaMatched.map((customer) => {
+                                const addr = customer.address || {};
+                                const addrLine = [addr.area, addr.city, addr.state, addr.pincode].filter(Boolean).join(", ");
+                                return (
+                                  <div
+                                    key={customer._id || customer.id}
+                                    style={{
+                                      display: "flex", alignItems: "center", gap: 12,
+                                      padding: "11px 13px", borderRadius: 12,
+                                      background: "#fffaf5",
+                                      border: "1.5px solid rgba(169,126,39,0.12)",
+                                    }}
+                                  >
+                                    {/* Avatar */}
+                                    <div style={{
+                                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                                      background: "linear-gradient(135deg,#c9a227,#a9771c)",
+                                      display: "flex", alignItems: "center", justifyContent: "center",
+                                    }}>
+                                      <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#fff" }}>
+                                        {customer.name?.charAt(0)?.toUpperCase() || "C"}
+                                      </span>
+                                    </div>
+                                    {/* Info */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#3e2b16", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {customer.name}
+                                      </div>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                                        <PhoneIcon style={{ fontSize: 11, color: "#a9771c" }} />
+                                        <span style={{ fontSize: "0.6rem", color: "#8a6b49" }}>{customer.phone || "—"}</span>
+                                      </div>
+                                      {addrLine && (
+                                        <div style={{ fontSize: "0.58rem", color: "#bbb", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                          📍 {addrLine}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {/* Already-assigned badge */}
+                                    {assignedCustomers.some(ac => (ac._id || ac.id) === (customer._id || customer.id)) && (
+                                      <span style={{
+                                        fontSize: "0.55rem", fontWeight: 700, padding: "3px 8px",
+                                        borderRadius: 999, background: "rgba(169,118,28,0.12)",
+                                        color: "#a9771c", flexShrink: 0,
+                                      }}>ASSIGNED</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()
+
+                ) : assignmentMode === "plan" ? (
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "#8a6b49", fontSize: "0.78rem" }}>
+                    {assignmentPlan ? "Assign every customer on the selected scheme." : "Select a plan above to continue."}
+                  </div>
+
                 ) : assignmentMode === "customer" && filteredAll.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "40px 0", color: "#bbb", fontSize: "0.78rem" }}>
                     {assignSearch ? "No customers match" : "All customers are already assigned to this agent"}
                   </div>
-                ) : assignmentMode !== "customer" ? (
-                  <div style={{ textAlign: "center", padding: "32px 0", color: "#8a6b49", fontSize: "0.78rem" }}>
-                    {assignmentMode === "area" ? "Assign every customer from the entered area or city." : "Assign every customer having the selected scheme."}
-                  </div>
+
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {filteredAll.map((customer) => {
@@ -608,35 +761,24 @@ export default function AgentDetail() {
                           style={{
                             display: "flex", alignItems: "center", gap: 12,
                             padding: "12px 14px", borderRadius: 14, cursor: "pointer",
-                            border: isSelected
-                              ? "2px solid #a9771c"
-                              : "1.5px solid rgba(169,126,39,0.12)",
-                            background: isSelected
-                              ? "rgba(169,118,28,0.06)"
-                              : "#fffaf5",
+                            border: isSelected ? "2px solid #a9771c" : "1.5px solid rgba(169,126,39,0.12)",
+                            background: isSelected ? "rgba(169,118,28,0.06)" : "#fffaf5",
                             transition: "all 0.15s",
                           }}
                         >
-                          {/* Checkbox */}
                           {isSelected
                             ? <CheckBoxIcon style={{ color: "#a9771c", fontSize: 22, flexShrink: 0 }} />
                             : <CheckBoxOutlineBlankIcon style={{ color: "#ccc", fontSize: 22, flexShrink: 0 }} />
                           }
-
-                          {/* Avatar */}
                           <div style={{
                             width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                            background: isSelected
-                              ? "linear-gradient(135deg, #c9a227, #a9771c)"
-                              : "linear-gradient(135deg, #fff1cd, #edce8a)",
+                            background: isSelected ? "linear-gradient(135deg,#c9a227,#a9771c)" : "linear-gradient(135deg,#fff1cd,#edce8a)",
                             display: "flex", alignItems: "center", justifyContent: "center",
                           }}>
                             <span style={{ fontSize: "0.9rem", fontWeight: 800, color: isSelected ? "#fff" : "#8c6518" }}>
                               {customer.name?.charAt(0)?.toUpperCase() || "C"}
                             </span>
                           </div>
-
-                          {/* Info */}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#3e2b16", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {customer.name}
@@ -659,29 +801,45 @@ export default function AgentDetail() {
                 borderTop: "1px solid rgba(169,126,39,0.1)",
                 flexShrink: 0,
               }}>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleAssign}
-                  disabled={selected.length === 0 || assigning}
-                  style={{
-                    width: "100%", height: 48, borderRadius: 12, border: "none",
-                    background: selected.length === 0
-                      ? "rgba(169,118,28,0.2)"
-                      : "linear-gradient(135deg, #c9a227, #a9771c)",
-                    color: "#fff", fontWeight: 800, fontSize: "0.85rem",
-                    cursor: selected.length === 0 || assigning ? "not-allowed" : "pointer",
-                    fontFamily: "'Montserrat', sans-serif",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    boxShadow: selected.length > 0 ? "0 4px 14px rgba(169,119,28,0.3)" : "none",
-                  }}
-                >
-                  {assigning
-                    ? <><CircularProgress size={18} sx={{ color: "#fff" }} /> Assigning…</>
-                    : selected.length === 0
-                      ? "Select customers to assign"
-                      : `Assign ${selected.length} Customer${selected.length > 1 ? "s" : ""}`
-                  }
-                </motion.button>
+                {/* Per-mode readiness check */}
+                {(() => {
+                  const isReady =
+                    (assignmentMode === "customer" && selected.length > 0) ||
+                    (assignmentMode === "area" && assignmentArea.trim().length > 0) ||
+                    (assignmentMode === "plan" && !!assignmentPlan);
+
+                  const btnLabel = assigning ? null :
+                    assignmentMode === "area"
+                      ? (assignmentArea.trim() ? `Assign all customers in "${assignmentArea.trim()}"` : "Enter an area to continue")
+                      : assignmentMode === "plan"
+                        ? (assignmentPlan ? `Assign all customers on selected plan` : "Choose a plan to continue")
+                        : (selected.length > 0 ? `Assign ${selected.length} Customer${selected.length > 1 ? "s" : ""}` : "Select customers to assign");
+
+                  return (
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleAssign}
+                      disabled={!isReady || assigning}
+                      style={{
+                        width: "100%", height: 48, borderRadius: 12, border: "none",
+                        background: isReady
+                          ? "linear-gradient(135deg, #c9a227, #a9771c)"
+                          : "rgba(169,118,28,0.2)",
+                        color: "#fff", fontWeight: 800, fontSize: "0.82rem",
+                        cursor: !isReady || assigning ? "not-allowed" : "pointer",
+                        fontFamily: "'Montserrat', sans-serif",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        boxShadow: isReady ? "0 4px 14px rgba(169,119,28,0.3)" : "none",
+                        transition: "background 0.2s, box-shadow 0.2s",
+                      }}
+                    >
+                      {assigning
+                        ? <><CircularProgress size={18} sx={{ color: "#fff" }} /> Assigning…</>
+                        : btnLabel
+                      }
+                    </motion.button>
+                  );
+                })()}
               </div>
             </motion.div>
           </motion.div>
