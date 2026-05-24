@@ -21,6 +21,7 @@ import RenicCopyright from "./common/RenicCopyright";
 import SmoothCarousel from "./common/SmoothCarousel";
 import SmoothGridCarousel from "./common/SmoothGridCarousel";
 import { getStoredRole, hasRequiredRole, isAdminLike } from "../utils/permissions";
+import { getImageUrl } from "../utils/imageUrl";
 
 const API = process.env.REACT_APP_API_URL;
 
@@ -41,11 +42,6 @@ const allFeatures = [
   { label: "Manage Agents", icon: GroupAdd, roles: ["admin"], route: "/admin/agents" },
 ];
 
-const getImageUrl = (path) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return `${API}${path}`;
-};
 
 function FeatureCard({ item, onClick }) {
   const Icon = item.icon;
@@ -442,52 +438,66 @@ export default function Home() {
                       width: '100%',
                       height: '100%',
                       position: 'relative',
-                      backgroundImage: background,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      padding: "28px 22px",
-                      display: "flex",
-                      alignItems: "flex-end",
+                      background: imageUrl
+                        ? 'transparent'
+                        : `linear-gradient(135deg, #6e3d1f 0%, #b27b36 100%)`,
                       borderRadius: 26,
+                      overflow: 'hidden',
                     }}
                   >
-                    <motion.div 
-                      className="home-hero-content" 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8, delay: 0.2 }}
-                      style={{ maxWidth: 520, color: "#fff7eb" }}
-                    >
-                      <motion.div 
-                        className="home-hero-title" 
-                        style={{ fontSize: "clamp(28px, 5vw, 46px)", lineHeight: 1.02, fontWeight: 800 }}
+                    {/* Background image */}
+                    {imageUrl && (
+                      <img
+                        src={imageUrl}
+                        alt={slide.title || "banner"}
+                        onError={e => { e.currentTarget.style.display = 'none'; }}
+                        style={{
+                          position: 'absolute', inset: 0,
+                          width: '100%', height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    )}
+                    {/* Dark gradient overlay */}
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'linear-gradient(90deg,rgba(56,34,14,0.82) 0%,rgba(56,34,14,0.5) 40%,rgba(56,34,14,0.1) 100%)',
+                      borderRadius: 26,
+                    }} />
+                    {/* Content */}
+                    <div style={{ position: 'relative', height: '100%', padding: '28px 22px', display: 'flex', alignItems: 'flex-end' }}>
+                      <motion.div
+                        className="home-hero-content"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 }}
+                        style={{ maxWidth: 520, color: '#fff7eb' }}
                       >
-                        {slide.title}
-                      </motion.div>
-                      {(slide.cta_label || slide.cta_route) && (
-                        <motion.button
-                          className="home-hero-button"
-                          onClick={() => navigate(slide.cta_route || "/newplan")}
-                          whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}
-                          whileTap={{ scale: 0.98 }}
-                          style={{
-                            marginTop: 18,
-                            height: 44,
-                            borderRadius: 999,
-                            border: "1px solid rgba(255,255,255,0.18)",
-                            background: "rgba(255,255,255,0.14)",
-                            color: "#fff",
-                            padding: "0 18px",
-                            cursor: "pointer",
-                            fontWeight: 700,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            backdropFilter: 'blur(8px)',
-                          }}
+                        <motion.div
+                          className="home-hero-title"
+                          style={{ fontSize: 'clamp(28px, 5vw, 46px)', lineHeight: 1.02, fontWeight: 800 }}
                         >
-                          {slide.cta_label || "Explore"}
-                        </motion.button>
-                      )}
-                    </motion.div>
+                          {slide.title}
+                        </motion.div>
+                        {(slide.cta_label || slide.cta_route) && (
+                          <motion.button
+                            className="home-hero-button"
+                            onClick={() => navigate(slide.cta_route || '/newplan')}
+                            whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}
+                            whileTap={{ scale: 0.98 }}
+                            style={{
+                              marginTop: 18, height: 44, borderRadius: 999,
+                              border: '1px solid rgba(255,255,255,0.18)',
+                              background: 'rgba(255,255,255,0.14)',
+                              color: '#fff', padding: '0 18px', cursor: 'pointer',
+                              fontWeight: 700, backdropFilter: 'blur(8px)',
+                            }}
+                          >
+                            {slide.cta_label || 'Explore'}
+                          </motion.button>
+                        )}
+                      </motion.div>
+                    </div>
                   </motion.div>
                 );
               }}
@@ -571,11 +581,20 @@ export default function Home() {
                     <div
                       style={{
                         height: 170,
-                        background: item.image_url
-                          ? `center / cover no-repeat url(${getImageUrl(item.image_url)})`
-                          : "linear-gradient(135deg, #f4dfb0 0%, #c98b5b 100%)",
+                        background: 'linear-gradient(135deg,#f4dfb0 0%,#c98b5b 100%)',
+                        position: 'relative',
+                        overflow: 'hidden',
                       }}
-                    />
+                    >
+                      {item.image_url && (
+                        <img
+                          src={getImageUrl(item.image_url)}
+                          alt={item.title || "arrival"}
+                          onError={e => { e.currentTarget.style.display = 'none'; }}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                      )}
+                    </div>
                     <div style={{ padding: 14, display: "grid", gap: 6, flex: 1 }}>
                       <div style={{ fontWeight: 800, color: "#3e2b16", fontSize: 17 }}>{item.title}</div>
                       <div style={{ fontWeight: 800, color: "#7b0000", fontSize: 26 }}>Rs {Number(item.price || 0).toLocaleString("en-IN")}</div>

@@ -7,7 +7,8 @@ const {
     getSchemeById,
     payInstallment,
     getSchemeSummary,
-    cancelScheme
+    cancelScheme,
+    toggleDigiGoldLink
 } = require('../controllers/schemeController');
 const { protect } = require('../middleware/auth');
 
@@ -27,5 +28,6 @@ router.route('/:id')
 
 router.post('/:id/pay', payInstallment);
 router.put('/:id/cancel', cancelScheme);
+router.patch('/:id/digi-gold-link', toggleDigiGoldLink);
 
 module.exports = router;

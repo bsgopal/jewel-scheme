@@ -172,6 +172,10 @@ const schemeSchema = new mongoose.Schema({
         type: String,
         maxlength: 500
     },
+    digiGoldLinked: {
+        type: Boolean,
+        default: false
+    },
     branch: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Branch'

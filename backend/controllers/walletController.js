@@ -145,8 +145,13 @@ exports.payInstallmentFromWallet = async (req, res, next) => {
         const { userId, schemeId, amount } = req.body;
         const numericAmount = Number(amount || 0);
         const targetUserId = userId || req.user._id;
+
         if (String(targetUserId) !== String(req.user._id) && !['admin', 'staff', 'agent'].includes(req.user.role)) {
             return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+
+        if (numericAmount < 100) {
+            return res.status(400).json({ success: false, message: 'Minimum payment amount is Rs 100' });
         }
 
         const user = await ensureWallet(targetUserId);
@@ -158,59 +163,120 @@ exports.payInstallmentFromWallet = async (req, res, next) => {
         if (!scheme) {
             return res.status(404).json({ success: false, message: 'Scheme not found' });
         }
+        if (scheme.status !== 'active') {
+            return res.status(400).json({ success: false, message: 'Only active schemes can receive payments' });
+        }
 
-        user.walletBalance -= numericAmount;
+        const isFlexible = scheme.schemeType === 'flexible';
+        const totalPlanAmount = Number((scheme.planAmount || scheme.monthlyAmount || 0) * (scheme.totalInstallments || 1));
+        const alreadyPaid   = Number(scheme.totalAmountPaid || 0);
+        const remaining     = Math.max(0, totalPlanAmount - alreadyPaid);
+
+        // For flexible plans: cap the payment at the remaining balance
+        const effectiveAmount = isFlexible ? Math.min(numericAmount, remaining) : numericAmount;
+
+        if (isFlexible && remaining <= 0) {
+            return res.status(400).json({ success: false, message: 'This plan is already fully paid and ready for redemption' });
+        }
+
+        // Deduct from wallet
+        user.walletBalance -= effectiveAmount;
         await user.save({ validateBeforeSave: false });
 
-        const rate = await getCurrentRateWithRefresh();
+        const rate     = await getCurrentRateWithRefresh();
         const goldRate = getRateForPurity(rate, scheme.goldPurity) || 1;
-        const goldWeight = Number((numericAmount / goldRate).toFixed(4));
+        const goldWeight = Number((effectiveAmount / goldRate).toFixed(4));
+
+        const nextTotalPaid = alreadyPaid + effectiveAmount;
+
+        // For flexible: recalculate installment count from total paid
+        let installmentNumber = scheme.paidInstallments + 1;
+        if (isFlexible) {
+            const installmentAmt = Number(scheme.planAmount || scheme.monthlyAmount || 1);
+            installmentNumber = Math.min(scheme.totalInstallments, Math.ceil(nextTotalPaid / installmentAmt));
+        }
+
         const payment = await Payment.create({
             user: targetUserId,
             scheme: scheme._id,
-            amount: numericAmount,
+            amount: effectiveAmount,
             goldRateAtPayment: goldRate,
             goldWeightCredited: goldWeight,
             bonusGoldWeight: 0,
             totalGoldWeight: goldWeight,
-            paymentMethod: 'Cash',
+            paymentMethod: 'DigiGold',
             status: 'completed',
-            installmentNumber: scheme.paidInstallments + 1,
-            totalAmount: numericAmount,
-            completedAt: new Date()
+            installmentNumber,
+            totalAmount: effectiveAmount,
+            completedAt: new Date(),
+            collectionSource: 'customer',
+            notes: 'Paid from Digi Gold wallet'
         });
 
-        scheme.paidInstallments += 1;
-        scheme.totalAmountPaid += numericAmount;
+        // Update scheme
+        scheme.totalAmountPaid  = nextTotalPaid;
         scheme.totalGoldWeight += goldWeight;
-        scheme.lastPaymentDate = new Date();
-        scheme.nextDueDate = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
+        scheme.lastPaymentDate  = new Date();
+
+        if (isFlexible) {
+            const installmentAmt = Number(scheme.planAmount || scheme.monthlyAmount || 1);
+            scheme.paidInstallments = Math.min(
+                scheme.totalInstallments,
+                Math.floor(nextTotalPaid / installmentAmt)
+            );
+            scheme.advanceAmount = Math.max(0, nextTotalPaid - (scheme.paidInstallments * installmentAmt));
+            // No fixed nextDueDate for flexible plans
+        } else {
+            scheme.paidInstallments += 1;
+            scheme.advanceAmount     = 0;
+            scheme.nextDueDate       = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        }
+
         scheme.installmentHistory.push({
-            installmentNumber: scheme.paidInstallments,
-            amount: numericAmount,
+            installmentNumber,
+            amount: effectiveAmount,
             goldRate,
             goldWeight,
-            paymentDate: new Date(),
-            paymentMethod: 'Cash',
-            paymentId: payment._id,
-            status: 'completed'
+            paymentDate:   new Date(),
+            paymentMethod: 'Cash',       // enum value
+            paymentId:     payment._id,
+            status:        'completed'
         });
+
+        // Auto-mature when fully paid
+        if (nextTotalPaid >= totalPlanAmount) {
+            scheme.status = 'matured';
+        }
+
         await scheme.save();
+
+        await User.findByIdAndUpdate(targetUserId, {
+            $inc: { totalGoldWeight: goldWeight, totalSavings: effectiveAmount }
+        });
 
         await WalletTransaction.create({
             user: user._id,
             type: 'wallet_payment',
-            amount: numericAmount,
-            balanceAfter: {
-                cash: user.walletBalance || 0,
-                gold: user.walletGoldBalance || 0
-            },
+            amount: effectiveAmount,
+            balanceAfter: { cash: user.walletBalance || 0, gold: user.walletGoldBalance || 0 },
             scheme: scheme._id,
-            remarks: `Installment paid for ${scheme.schemeName}`,
+            remarks: `Payment of Rs ${effectiveAmount} for ${scheme.schemeName} (${isFlexible ? 'flexible' : 'installment'})`,
             createdBy: req.user._id
         });
 
-        res.status(200).json({ success: true, message: 'Installment paid from wallet', data: payment });
+        res.status(200).json({
+            success: true,
+            message: `Rs ${effectiveAmount.toLocaleString('en-IN')} paid from Digi Gold wallet`,
+            data: {
+                amountPaid: effectiveAmount,
+                goldCredited: goldWeight,
+                goldRate,
+                newWalletBalance: user.walletBalance,
+                totalAmountPaid: nextTotalPaid,
+                remainingAmount: Math.max(0, totalPlanAmount - nextTotalPaid),
+                schemeStatus: scheme.status
+            }
+        });
     } catch (error) {
         next(error);
     }

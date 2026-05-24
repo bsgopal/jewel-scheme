@@ -695,3 +695,20 @@ exports.cancelScheme = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Toggle Digi Gold link for a scheme
+// @route   PATCH /api/schemes/:id/digi-gold-link
+// @access  Private
+exports.toggleDigiGoldLink = async (req, res, next) => {
+    try {
+        const scheme = await Scheme.findOne({ _id: req.params.id, user: req.user._id });
+        if (!scheme) return res.status(404).json({ success: false, message: 'Scheme not found' });
+        scheme.digiGoldLinked = !scheme.digiGoldLinked;
+        await scheme.save({ validateBeforeSave: false });
+        res.status(200).json({
+            success: true,
+            digiGoldLinked: scheme.digiGoldLinked,
+            message: scheme.digiGoldLinked ? 'Plan linked to Digi Gold wallet' : 'Plan unlinked from Digi Gold wallet',
+        });
+    } catch (error) { next(error); }
+};

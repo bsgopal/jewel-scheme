@@ -9,6 +9,7 @@ import ShowChartIcon from "@mui/icons-material/ShowChart";
 import WalletHistory from "./WalletHistory";
 import GoldChart from "./GoldChart";
 import PlanTab from "./PlanTab";
+import EnhancedHeader from "../common/EnhancedHeader";
 
 const easeInOutCubic = [0.4, 0, 0.2, 1];
 
@@ -135,17 +136,7 @@ export default function Wallet() {
 
   return (
     <div style={pageStyle}>
-      <motion.div 
-        style={header}
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.25 }}
-      >
-        <span style={backBtn} onClick={() => window.history.back()}>
-          ←
-        </span>
-        <h2 style={title}>Digi Gold</h2>
-      </motion.div>
+      <EnhancedHeader title="Digi Gold Wallet" subtitle="Manage your digital gold savings" showLogo />
 
       {activeTab === "summary" && (
         <motion.div 
