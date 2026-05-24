@@ -6,7 +6,8 @@ const {
     getRateByDate,
     calculateGoldWeight,
     getRateStats,
-    refreshRates
+    refreshRates,
+    setRates
 } = require('../controllers/goldRateController');
 
 // All public
@@ -16,5 +17,6 @@ router.get('/stats', getRateStats);
 router.get('/calculate', calculateGoldWeight);
 router.get('/date/:date', getRateByDate);
 router.post('/refresh', refreshRates);
+router.post('/set', setRates);
 
 module.exports = router;

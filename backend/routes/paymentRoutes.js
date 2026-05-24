@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     createOrder,
     verifyPayment,
+    createManualPayment,
     getPaymentHistory,
     getPaymentById,
     getReceipt,
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.post('/create-order', createOrder);
 router.post('/verify', verifyPayment);
+router.post('/', createManualPayment);
 router.get('/user/self', getGroupedPaymentsForSelf);
 router.get('/', getPaymentHistory);
 router.get('/:id', getPaymentById);

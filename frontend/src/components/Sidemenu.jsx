@@ -15,25 +15,31 @@ import logo from "./renic-tech-logo.svg";
 import RenicCopyright from "./common/RenicCopyright";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getStoredRole, isAdminLike } from "../utils/permissions";
+import { getDefaultRoute } from "../utils/navigation";
 
 export default function Sidemenu({ open, onClose }) {
   const navigate = useNavigate();
-  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const role = getStoredRole();
+  const canManageEverything = isAdminLike(role);
+  const homeRoute = getDefaultRoute({ role, hasToken: true });
 
   const items = [
-    { text: "Home",           icon: <HomeIcon />,          route: "/Home" },
-    { text: "Offers",         icon: <LocalOfferIcon />,    route: "/offers" },
-    { text: "New Arrivals",   icon: <StorefrontIcon />,    route: "/newarrivals" },
-    { text: "Profile",        icon: <AccountCircleIcon />, route: "/profile" },
-    ...(role === "admin"
+    { text: "Home", icon: <HomeIcon />, route: homeRoute },
+    { text: "Offers", icon: <LocalOfferIcon />, route: "/offers" },
+    { text: "New Arrivals", icon: <StorefrontIcon />, route: "/newarrivals" },
+    { text: "Profile", icon: <AccountCircleIcon />, route: "/profile" },
+    ...(canManageEverything
       ? [
-          { text: "Manage Center",   icon: <HomeIcon />,        route: "/admin-manage" },
-          { text: "Rate Entry",      icon: <PriceCheckIcon />,  route: "/rateentry" },
-          { text: "Manage Arrivals", icon: <StorefrontIcon />,  route: "/manage-newarrivals" },
-          { text: "Payment History", icon: <HistoryIcon />,     route: "/payment-history" },
-          { text: "Manage Agents",   icon: <GroupsIcon />,      route: "/admin/agents" }, // ← NEW
+          { text: "Manage Center", icon: <HomeIcon />, route: "/admin-manage" },
+          { text: "Rate Entry", icon: <PriceCheckIcon />, route: "/rateentry" },
+          { text: "Manage Arrivals", icon: <StorefrontIcon />, route: "/manage-newarrivals" },
+          { text: "Payment History", icon: <HistoryIcon />, route: "/payment-history" },
+          { text: "Manage Agents", icon: <GroupsIcon />, route: "/admin/agents" },
         ]
-      : []),
+      : role === "agent"
+        ? [{ text: "My Customers", icon: <GroupsIcon />, route: "/agent/customers" }]
+        : []),
   ];
 
   const handleNavigate = (route) => {
@@ -45,7 +51,7 @@ export default function Sidemenu({ open, onClose }) {
     onClose();
     localStorage.clear();
     delete axios.defaults.headers.common.Authorization;
-    window.location.replace("/");
+    navigate("/", { replace: true });
   };
 
   return (
@@ -65,7 +71,6 @@ export default function Sidemenu({ open, onClose }) {
         },
       }}
     >
-      {/* ── Logo + brand ── */}
       <Box sx={{ p: 3, borderBottom: "1px solid rgba(169,126,39,0.12)" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Box
@@ -83,7 +88,6 @@ export default function Sidemenu({ open, onClose }) {
         </Box>
       </Box>
 
-      {/* ── Nav items ── */}
       <List sx={{ px: 2, py: 2, flex: 1, overflowY: "auto" }}>
         {items.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
@@ -108,7 +112,6 @@ export default function Sidemenu({ open, onClose }) {
         ))}
       </List>
 
-      {/* ── Logout ── */}
       <Box sx={{ p: 2 }}>
         <ListItemButton
           onClick={handleLogout}

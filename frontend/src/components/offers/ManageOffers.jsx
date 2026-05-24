@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowBack, Add, Delete, Edit, PictureAsPdf, ToggleOn, ToggleOff } from "@mui/icons-material";
+import { Alert, Box, Button, Snackbar } from "@mui/material";
 import axios from "axios";
 
 const API = process.env.REACT_APP_API_URL;
@@ -27,6 +28,8 @@ export default function ManageOffers() {
     const [deletingId, setDeletingId] = useState(null);
     const [togglingId, setTogglingId] = useState(null);
     const [filter, setFilter] = useState("all");
+    const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+    const [confirmAction, setConfirmAction] = useState(null);
 
     const fetchOffers = useCallback(async () => {
         setLoading(true);
@@ -37,7 +40,7 @@ export default function ManageOffers() {
             });
             setOffers(res.data);
         } catch (err) {
-            console.error("Failed to fetch offers", err);
+            // Failed to fetch offers
             setOffers([]);
             setError(
                 err.response?.data?.message ||
@@ -53,16 +56,23 @@ export default function ManageOffers() {
     useEffect(() => { fetchOffers(); }, [fetchOffers]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this offer? This cannot be undone.")) return;
-        setDeletingId(id);
-        try {
-            await axios.delete(`${API}/api/offers/${id}`, { headers: authHeaders() });
-            setOffers((prev) => prev.filter((o) => o.id !== id));
-        } catch (err) {
-            console.error("Delete failed", err);
-        } finally {
-            setDeletingId(null);
-        }
+        setConfirmAction({
+            message: "Delete this offer? This cannot be undone.",
+            confirmLabel: "Delete",
+            onConfirm: async () => {
+                setDeletingId(id);
+                try {
+                    await axios.delete(`${API}/api/offers/${id}`, { headers: authHeaders() });
+                    setOffers((prev) => prev.filter((o) => o.id !== id));
+                    setToast({ open: true, message: "Offer deleted.", severity: "success" });
+                } catch (err) {
+                    // Delete failed
+                    setToast({ open: true, message: err.response?.data?.message || "Unable to delete offer.", severity: "error" });
+                } finally {
+                    setDeletingId(null);
+                }
+            },
+        });
     };
 
     const handleToggleActive = async (offer) => {
@@ -77,7 +87,7 @@ export default function ManageOffers() {
                 prev.map((o) => o.id === offer.id ? { ...o, active: !o.active } : o)
             );
         } catch (err) {
-            console.error("Toggle failed", err);
+            // Toggle failed
         } finally {
             setTogglingId(null);
         }
@@ -98,6 +108,7 @@ export default function ManageOffers() {
     };
 
     return (
+        <>
         <div className="app-safe-shell" style={{
             minHeight: "100vh",
             background: "linear-gradient(180deg, #fffdf8 0%, #fff4df 100%)",
@@ -451,5 +462,37 @@ export default function ManageOffers() {
                 </div>
             </div>
         </div>
+
+        <Snackbar open={toast.open} autoHideDuration={3000} onClose={() => setToast((prev) => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+            <Alert severity={toast.severity} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>
+                {toast.message}
+            </Alert>
+        </Snackbar>
+
+        <Snackbar open={Boolean(confirmAction)} onClose={() => setConfirmAction(null)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+            <Alert
+                severity="warning"
+                onClose={() => setConfirmAction(null)}
+                action={(
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button color="inherit" size="small" onClick={() => setConfirmAction(null)}>Cancel</Button>
+                        <Button
+                            color="inherit"
+                            size="small"
+                            onClick={async () => {
+                                const action = confirmAction;
+                                setConfirmAction(null);
+                                await action?.onConfirm?.();
+                            }}
+                        >
+                            {confirmAction?.confirmLabel || "Confirm"}
+                        </Button>
+                    </Box>
+                )}
+            >
+                {confirmAction?.message || ""}
+            </Alert>
+        </Snackbar>
+        </>
     );
 }

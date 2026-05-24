@@ -96,6 +96,16 @@ const paymentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
+    collectionSource: {
+        type: String,
+        enum: ['customer', 'agent', 'admin', 'staff', 'system'],
+        default: 'customer'
+    },
+    billNumber: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     receiptUrl: String,
     notes: String,
     metadata: {

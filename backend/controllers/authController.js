@@ -24,13 +24,20 @@ exports.register = async (req, res, next) => {
         const address = typeof req.body.address === 'string'
             ? {
                 street: req.body.address || '',
+                area: req.body.area || '',
                 city: req.body.city || '',
                 state: req.body.state || 'Tamil Nadu',
                 pincode: req.body.pincode || '',
                 landmark: ''
             }
             : req.body.address;
+        const nominee = {
+            name: req.body.nominee?.name || req.body.nominee_name || '',
+            phone: req.body.nominee?.phone || req.body.nominee_mobile || '',
+            relation: req.body.nominee?.relation || req.body.nominee_relation || ''
+        };
         const { dateOfBirth, gender, referralCode } = req.body;
+        const isAdminCreate = Boolean(req.body.isSuperAdminCreate);
 
         // Check if user already exists
         const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
@@ -55,10 +62,11 @@ exports.register = async (req, res, next) => {
             phone,
             password,
             address,
+            nominee,
             dateOfBirth,
             gender,
             referredBy,
-            role: req.body.isSuperAdminCreate ? supportedRole : 'customer'
+            role: isAdminCreate ? supportedRole : 'customer'
         });
 
         // Generate OTP and send via EMAIL
@@ -68,8 +76,7 @@ exports.register = async (req, res, next) => {
         try {
             await sendOTPEmail(user.email, otp, 'verification');
         } catch (emailError) {
-            console.error('OTP email error:', emailError.message);
-            console.log(`[DEV] OTP for ${user.email}: ${otp}`);
+            // OTP email error
         }
 
         res.status(201).json({
@@ -162,8 +169,7 @@ exports.resendOTP = async (req, res, next) => {
         try {
             await sendOTPEmail(user.email, otp, 'verification');
         } catch (emailError) {
-            console.error('OTP email error:', emailError.message);
-            console.log(`[DEV] OTP for ${user.email}: ${otp}`);
+            // OTP email error
         }
 
         res.status(200).json({ success: true, message: 'OTP sent to your email address' });
@@ -177,6 +183,18 @@ exports.resendOTP = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: errors.array()[0]?.msg || 'Validation failed',
+                errors: errors.array().map((item) => ({
+                    field: item.path,
+                    message: item.msg
+                }))
+            });
+        }
+
         const { phone, password } = req.body;
 
         if (!phone || !password) {
@@ -199,8 +217,7 @@ exports.login = async (req, res, next) => {
             try {
                 await sendOTPEmail(user.email, otp, 'verification');
             } catch (emailError) {
-                console.error('OTP email error:', emailError.message);
-                console.log(`[DEV] OTP for ${user.email}: ${otp}`);
+                // OTP email error
             }
             return res.status(403).json({
                 success: false,
@@ -251,7 +268,7 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.updateProfile = async (req, res, next) => {
     try {
-        const allowedFields = ['name', 'email', 'address', 'dateOfBirth', 'gender', 'aadharNumber', 'panNumber', 'profileImage', 'notifications', 'preferredBranch'];
+        const allowedFields = ['name', 'email', 'address', 'dateOfBirth', 'gender', 'aadharNumber', 'panNumber', 'profileImage', 'notifications', 'preferredBranch', 'businessProfile'];
         const updateData = {};
         allowedFields.forEach(field => { if (req.body[field] !== undefined) updateData[field] = req.body[field]; });
 
@@ -259,6 +276,23 @@ exports.updateProfile = async (req, res, next) => {
             const existingUser = await User.findOne({ email: updateData.email.toLowerCase(), _id: { $ne: req.user._id } });
             if (existingUser) return res.status(400).json({ success: false, message: 'Email already in use' });
             updateData.email = updateData.email.toLowerCase();
+        }
+
+        if (updateData.businessProfile) {
+            const currentUser = await User.findById(req.user._id).select('businessProfile');
+            const mergedBusinessProfile = {
+                ...(currentUser?.businessProfile?.toObject?.() || currentUser?.businessProfile || {}),
+                ...updateData.businessProfile
+            };
+
+            if (Array.isArray(mergedBusinessProfile.featuredProducts)) {
+                mergedBusinessProfile.featuredProducts = mergedBusinessProfile.featuredProducts
+                    .map(item => `${item || ''}`.trim())
+                    .filter(Boolean)
+                    .slice(0, 12);
+            }
+
+            updateData.businessProfile = mergedBusinessProfile;
         }
 
         const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true, runValidators: true });
@@ -314,8 +348,7 @@ exports.forgotPassword = async (req, res, next) => {
         try {
             await sendOTPEmail(user.email, otp, 'password-reset');
         } catch (emailError) {
-            console.error('OTP email error:', emailError.message);
-            console.log(`[DEV] Password reset OTP for ${user.email}: ${otp}`);
+            // OTP email error
         }
 
         res.status(200).json({

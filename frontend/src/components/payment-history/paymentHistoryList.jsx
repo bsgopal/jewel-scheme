@@ -15,14 +15,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import { buildBackState, goBackOrFallback } from "../../utils/navigation";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function PaymentHistoryList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -74,7 +76,7 @@ export default function PaymentHistoryList() {
     <Box className="app-safe-shell" sx={{ py: 2 }}>
       <Box sx={{ maxWidth: 920, mx: "auto" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ color: "#b88324" }}>
+          <IconButton onClick={() => goBackOrFallback(navigate, location, "/admin-manage")} sx={{ color: "#b88324" }}>
             <ArrowBackIosNewIcon />
           </IconButton>
           <Typography sx={{ fontSize: 26, fontWeight: 800, color: "#3e2b16" }}>Customers</Typography>
@@ -118,7 +120,7 @@ export default function PaymentHistoryList() {
               {filtered.map((user) => (
                 <ListItem key={user._id} disablePadding sx={{ mb: 1.5 }}>
                   <ListItemButton
-                    onClick={() => navigate(`/payment-history/${user._id}`)}
+                    onClick={() => navigate(`/payment-history/${user._id}`, { state: buildBackState(location) })}
                     sx={{
                       borderRadius: "18px",
                       border: "1px solid rgba(169,126,39,0.12)",

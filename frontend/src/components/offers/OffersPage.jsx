@@ -1,16 +1,18 @@
 import { Box, Typography, Fab, IconButton, CircularProgress } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import OfferCard from "./OfferCard";
 import { motion } from "framer-motion";
 
 import GoldShimmer from "../common/GoldShimmer";
+import { getDefaultRoute, goBackOrFallback } from "../../utils/navigation";
 
 export default function OffersPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const role = localStorage.getItem("role");
 
     const [offers, setOffers] = useState([]);
@@ -22,7 +24,7 @@ export default function OffersPage() {
                 const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/offers`);
                 setOffers(res.data);
             } catch (err) {
-                console.error("Failed to load offers", err);
+                // Failed to load offers
             } finally {
                 setLoading(false);
             }
@@ -44,7 +46,7 @@ export default function OffersPage() {
 
             {/* 🔙 Back */}
             <IconButton
-                onClick={() => navigate(-1)}
+                onClick={() => goBackOrFallback(navigate, location, getDefaultRoute())}
                 sx={{ position: "absolute", top: 20, left: 20, color: "#b88324", zIndex: 9999 }}
             >
                 <ArrowBackIosNewIcon />

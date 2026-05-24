@@ -40,10 +40,25 @@ const userSchema = new mongoose.Schema({
     },
     address: {
         street: { type: String, default: '' },
+        area: { type: String, default: '' },
         city: { type: String, default: '' },
         state: { type: String, default: 'Tamil Nadu' },
         pincode: { type: String, default: '' },
         landmark: { type: String, default: '' }
+    },
+    nominee: {
+        name: { type: String, default: '' },
+        phone: {
+            type: String,
+            default: '',
+            validate: {
+                validator(value) {
+                    return !value || /^[6-9]\d{9}$/.test(value);
+                },
+                message: 'Please provide a valid 10-digit nominee phone number'
+            }
+        },
+        relation: { type: String, default: '' }
     },
     dateOfBirth: {
         type: Date
@@ -141,6 +156,37 @@ const userSchema = new mongoose.Schema({
         notes: { type: String, default: '' },
         collectionAmounts: { type: Array, default: [] },      // ← add
         defaultCollectionAmount: { type: Number, default: null },    // ← add
+    },
+    businessProfile: {
+        shopName: { type: String, default: '', trim: true, maxlength: 80 },
+        category: { type: String, default: '', trim: true, maxlength: 80 },
+        tagline: { type: String, default: '', trim: true, maxlength: 140 },
+        about: { type: String, default: '', trim: true, maxlength: 1200 },
+        whatsapp: {
+            type: String,
+            default: '',
+            validate: {
+                validator(value) {
+                    return !value || /^[6-9]\d{9}$/.test(value);
+                },
+                message: 'Please provide a valid 10-digit WhatsApp number'
+            }
+        },
+        website: { type: String, default: '', trim: true, maxlength: 200 },
+        instagram: { type: String, default: '', trim: true, maxlength: 100 },
+        featuredProducts: {
+            type: [String],
+            default: [],
+            validate: {
+                validator(value) {
+                    return Array.isArray(value) && value.length <= 12;
+                },
+                message: 'You can add up to 12 featured products'
+            }
+        },
+        offerTitle: { type: String, default: '', trim: true, maxlength: 120 },
+        offerDetails: { type: String, default: '', trim: true, maxlength: 1200 },
+        isPublicProfile: { type: Boolean, default: true }
     },
     assignedAgent: {
         type: mongoose.Schema.Types.ObjectId,

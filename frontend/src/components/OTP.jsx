@@ -59,11 +59,7 @@ export default function OTP() {
       if (user?.token) {
         localStorage.setItem("token", user.token);
         localStorage.setItem("userId", user._id);
-        localStorage.setItem("phone", user.phone);
-        localStorage.setItem("name", user.name);
         localStorage.setItem("role", user.role);
-        localStorage.setItem("email", user.email);
-        localStorage.setItem("customerId", user.customerId);
         axios.defaults.headers.common.Authorization = `Bearer ${user.token}`;
       }
 

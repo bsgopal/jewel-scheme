@@ -3,7 +3,8 @@ import { TextField } from "@mui/material";
 import { ArrowBack, Delete, Add, PhotoCamera, Edit, Close, Check } from "@mui/icons-material";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackOrFallback } from "../../utils/navigation";
 
 /* ── Shared input style ── */
 const fieldSx = {
@@ -57,6 +58,7 @@ export default function ManageNewArrivals() {
   const [isSaving, setIsSaving] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const API = process.env.REACT_APP_API_URL;
   const token = localStorage.getItem("token");
   const headers = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
@@ -66,7 +68,9 @@ export default function ManageNewArrivals() {
     axios
       .get(`${API}/api/newarrivals`, { headers })
       .then((res) => setArrivals(res.data))
-      .catch(console.error);
+      .catch(() => {
+        // Failed to fetch arrivals
+      });
   }, [API, headers]);
 
   useEffect(() => { fetchArrivals(); }, [fetchArrivals]);
@@ -83,7 +87,7 @@ export default function ManageNewArrivals() {
       });
       setUrl(res.data.url);
     } catch (err) {
-      console.error("Upload failed", err);
+      // Upload failed
     } finally {
       setLoading(false);
     }
@@ -133,7 +137,9 @@ export default function ManageNewArrivals() {
         { headers }
       )
       .then(() => { fetchArrivals(); closeEdit(); })
-      .catch(console.error)
+      .catch(() => {
+        // Failed to save
+      })
       .finally(() => setIsSaving(false));
   };
 
@@ -158,7 +164,7 @@ export default function ManageNewArrivals() {
       }}>
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOrFallback(navigate, location, "/newarrivals")}
           style={{
             background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,200,80,0.3)",
             borderRadius: 10, padding: "6px 8px", cursor: "pointer",

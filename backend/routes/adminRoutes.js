@@ -18,7 +18,8 @@ const {
     markDelivered,
     createBranch,
     getAllBranches,
-    getOperationalInsights
+    getOperationalInsights,
+    getCollectionSummary
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/auth');
 
@@ -28,6 +29,7 @@ router.use(protect, admin);
 // Dashboard
 router.get('/dashboard', getDashboardStats);
 router.get('/operational-insights', getOperationalInsights);
+router.get('/collection-summary', getCollectionSummary);
 
 // Gold Rate
 router.post('/gold-rate', updateGoldRate);

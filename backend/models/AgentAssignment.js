@@ -17,6 +17,20 @@ const agentAssignmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Branch'
     },
+    assignmentType: {
+        type: String,
+        enum: ['customer', 'area', 'plan'],
+        default: 'customer'
+    },
+    area: {
+        type: String,
+        default: ''
+    },
+    scheme: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Scheme',
+        default: null
+    },
     notes: {
         type: String,
         default: ''

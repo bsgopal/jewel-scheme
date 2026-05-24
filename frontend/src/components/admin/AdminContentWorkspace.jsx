@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Alert, FormControlLabel, Snackbar, Switch, TextField } from "@mui/material";
+import { Alert, Box, Button, FormControlLabel, Snackbar, Switch, TextField } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -171,6 +171,7 @@ export default function AdminContentWorkspace() {
   const [offerForm, setOfferForm] = useState(emptyOffer);
   const [arrivalForm, setArrivalForm] = useState(emptyArrival);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const showToast = (message, severity = "success") => setToast({ open: true, message, severity });
 
@@ -224,11 +225,15 @@ export default function AdminContentWorkspace() {
   };
 
   const deleteItem = async (type, id) => {
-    if (!window.confirm(`Delete this ${type.toLowerCase()}?`)) return;
-
-    await axios.delete(`${API}/api/${type === "Banners" ? "banners" : type === "Offers" ? "offers" : "newarrivals"}/${id}`, { headers });
-    await loadContent();
-    showToast(`${type.slice(0, -1)} deleted.`);
+    setConfirmAction({
+      message: `Delete this ${type.toLowerCase()}?`,
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        await axios.delete(`${API}/api/${type === "Banners" ? "banners" : type === "Offers" ? "offers" : "newarrivals"}/${id}`, { headers });
+        await loadContent();
+        showToast(`${type.slice(0, -1)} deleted.`);
+      },
+    });
   };
 
   return (
@@ -312,6 +317,31 @@ export default function AdminContentWorkspace() {
 
       <Snackbar open={toast.open} autoHideDuration={3000} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>
         <Alert severity={toast.severity} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>{toast.message}</Alert>
+      </Snackbar>
+
+      <Snackbar open={Boolean(confirmAction)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }} onClose={() => setConfirmAction(null)}>
+        <Alert
+          severity="warning"
+          onClose={() => setConfirmAction(null)}
+          action={(
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button color="inherit" size="small" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={async () => {
+                  const action = confirmAction;
+                  setConfirmAction(null);
+                  await action?.onConfirm?.();
+                }}
+              >
+                {confirmAction?.confirmLabel || "Confirm"}
+              </Button>
+            </Box>
+          )}
+        >
+          {confirmAction?.message || ""}
+        </Alert>
       </Snackbar>
     </div>
   );

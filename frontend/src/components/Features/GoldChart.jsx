@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Chart as ChartJS,
@@ -14,10 +14,11 @@ import { Line } from "react-chartjs-2";
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Filler);
 
 export default function GoldChart() {
-  const userId = localStorage.getItem("userId");
+  const userId = localStorage.getItem("userId") || "self";
+  const token = localStorage.getItem("token");
   const API = process.env.REACT_APP_API_URL;
-
-  const [monthlyGold, setMonthlyGold] = useState([]);
+  const [monthlyGold, setMonthlyGold] = useState({});
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchChartData();
@@ -25,31 +26,33 @@ export default function GoldChart() {
 
   async function fetchChartData() {
     try {
-      const res = await axios.get(`${API}/api/wallet/history/${userId}`);
-      const history = res.data.history;
+      setError("");
+      const res = await axios.get(`${API}/api/wallet/history/${userId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
-      const monthly = {}; // group by month
+      const history = Array.isArray(res.data) ? res.data : res.data?.history || [];
+      const monthly = {};
 
-      history.forEach((h) => {
-        if (h.type !== "convert" && h.type !== "wallet_payment") return;
+      history.forEach((entry) => {
+        if (entry.type !== "convert" && entry.type !== "wallet_payment") return;
 
-        const month = new Date(h.created_at).toLocaleString("default", {
+        const month = new Date(entry.created_at).toLocaleString("default", {
           month: "short",
           year: "numeric",
         });
 
         if (!monthly[month]) monthly[month] = 0;
-
-        monthly[month] += Number(h.gold_grams || 0);
+        monthly[month] += Number(entry.gold || 0);
       });
 
       setMonthlyGold(monthly);
     } catch (err) {
-      console.error("Chart Fetch Error:", err);
+      setError(err.response?.data?.message || "Unable to load Digi Gold chart.");
+      setMonthlyGold({});
     }
   }
 
-  // Chart labels & data
   const labels = Object.keys(monthlyGold);
   const dataPoints = Object.values(monthlyGold);
 
@@ -57,16 +60,16 @@ export default function GoldChart() {
     labels,
     datasets: [
       {
-        label: "Gold Growth (grams)",
+        label: "Digi Gold Growth (grams)",
         data: dataPoints,
         fill: true,
-        borderColor: "#FFD700",
+        borderColor: "#c89b3c",
         tension: 0.4,
-        pointBackgroundColor: "#FFD700",
+        pointBackgroundColor: "#c89b3c",
         backgroundColor: (ctx) => {
           const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, "rgba(255,215,0,0.5)");
-          gradient.addColorStop(1, "rgba(255,215,0,0)");
+          gradient.addColorStop(0, "rgba(200,155,60,0.45)");
+          gradient.addColorStop(1, "rgba(200,155,60,0)");
           return gradient;
         },
         borderWidth: 2,
@@ -79,17 +82,17 @@ export default function GoldChart() {
     plugins: {
       tooltip: {
         callbacks: {
-          label: (ctx) => `${ctx.raw} g`,
+          label: (ctx) => `${Number(ctx.raw || 0).toFixed(4)} g`,
         },
       },
     },
     scales: {
       y: {
-        ticks: { color: "white" },
-        grid: { color: "rgba(255,255,255,0.1)" },
+        ticks: { color: "#7a5a28" },
+        grid: { color: "rgba(122,90,40,0.12)" },
       },
       x: {
-        ticks: { color: "#FFD700" },
+        ticks: { color: "#7a5a28" },
         grid: { display: false },
       },
     },
@@ -97,24 +100,20 @@ export default function GoldChart() {
 
   return (
     <div style={{ paddingBottom: "80px" }}>
-      <h2 style={{ color: "#FFD700", marginBottom: "15px" }}>Gold Growth Chart</h2>
+      <div style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(18px)", padding: "18px", borderRadius: "16px", border: "1px solid rgba(169,126,39,0.12)", boxShadow: "0 16px 36px rgba(133, 104, 74, 0.08)" }}>
+        <h2 style={{ color: "#4b3519", margin: 0 }}>Digi Gold Growth Chart</h2>
+        <p style={{ color: "#8a6b49", margin: "8px 0 16px" }}>
+          This graph shows how much gold was accumulated through Digi Gold conversions and scheme usage over time.
+        </p>
 
-      {labels.length === 0 ? (
-        <p style={{ color: "#ccc", textAlign: "center" }}>No gold data available.</p>
-      ) : (
-        <div
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            backdropFilter: "blur(18px)",
-            padding: "15px",
-            borderRadius: "14px",
-            border: "1px solid rgba(255,255,255,0.2)",
-            boxShadow: "0 4px 25px rgba(255,215,0,0.25)",
-          }}
-        >
+        {error ? (
+          <p style={{ color: "#a33a2b", margin: 0 }}>{error}</p>
+        ) : labels.length === 0 ? (
+          <p style={{ color: "#8a6b49", margin: 0 }}>No Digi Gold growth data available yet.</p>
+        ) : (
           <Line data={data} options={options} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

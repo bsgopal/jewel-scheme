@@ -130,7 +130,7 @@ const JoinNewPlan = () => {
         });
 
       } catch (err) {
-        console.error("Profile fetch error:", err);
+        // Error fetching profile
         // Fallback to localStorage
         const name   = localStorage.getItem("name")   || "";
         const mobile = localStorage.getItem("mobile") || "";

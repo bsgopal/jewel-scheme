@@ -12,13 +12,15 @@ import {
   MenuItem,
   Snackbar,
   TextField,
+  Button,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AdminContentWorkspace from "./AdminContentWorkspace";
+import { goBackOrFallback } from "../../utils/navigation";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const tabs = ["Overview", "Users", "Agents", "Schemes", "Payments", "Plans", "Content"];
@@ -41,12 +43,14 @@ function Panel({ children }) {
 
 export default function AdminManage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem("token");
   const [activeTab, setActiveTab] = useState("Overview");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [dashboard, setDashboard] = useState(null);
   const [insights, setInsights] = useState(null);
+  const [collectionSummary, setCollectionSummary] = useState(null);
   const [users, setUsers] = useState([]);
   const [schemes, setSchemes] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -64,17 +68,21 @@ export default function AdminManage() {
   const [schemeForm, setSchemeForm] = useState({ status: "active", notes: "" });
   const [editingPayment, setEditingPayment] = useState(null);
   const [paymentForm, setPaymentForm] = useState({ status: "pending", paymentMethod: "Cash", notes: "" });
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const showToast = (message, severity = "success") => setToast({ open: true, message, severity });
+  const openConfirm = (config) => setConfirmAction(config);
+  const closeConfirm = () => setConfirmAction(null);
 
   const loadAll = useCallback(async () => {
     const requestConfig = { headers: { Authorization: `Bearer ${token}` } };
 
     setLoading(true);
     try {
-      const [dashboardRes, insightsRes, usersRes, schemesRes, paymentsRes, plansRes] = await Promise.all([
+      const [dashboardRes, insightsRes, collectionRes, usersRes, schemesRes, paymentsRes, plansRes] = await Promise.all([
         axios.get(`${API}/api/admin/dashboard`, requestConfig),
         axios.get(`${API}/api/admin/operational-insights`, requestConfig),
+        axios.get(`${API}/api/admin/collection-summary`, requestConfig),
         axios.get(`${API}/api/admin/users`, { ...requestConfig, params: { limit: 200 } }),
         axios.get(`${API}/api/admin/schemes`, { ...requestConfig, params: { limit: 200 } }),
         axios.get(`${API}/api/admin/payments`, { ...requestConfig, params: { limit: 200 } }),
@@ -83,6 +91,7 @@ export default function AdminManage() {
 
       setDashboard(dashboardRes.data?.data || null);
       setInsights(insightsRes.data?.data || null);
+      setCollectionSummary(collectionRes.data?.data || null);
       setUsers(usersRes.data?.data || []);
       setSchemes(schemesRes.data?.data || []);
       setPayments(paymentsRes.data?.data || []);
@@ -171,15 +180,20 @@ export default function AdminManage() {
   };
 
   const deleteUser = async (user) => {
-    if (!window.confirm(`Delete ${user.name}?`)) return;
-
-    try {
-      await axios.delete(`${API}/api/admin/users/${user._id}`, { headers: { Authorization: `Bearer ${token}` } });
-      await loadAll();
-      showToast("User deleted.");
-    } catch (error) {
-      showToast(error.response?.data?.message || "Unable to delete user.", "error");
-    }
+    openConfirm({
+      message: `Delete ${user.name}?`,
+      severity: "warning",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${API}/api/admin/users/${user._id}`, { headers: { Authorization: `Bearer ${token}` } });
+          await loadAll();
+          showToast("User deleted.");
+        } catch (error) {
+          showToast(error.response?.data?.message || "Unable to delete user.", "error");
+        }
+      },
+    });
   };
 
   const openEditScheme = (scheme) => {
@@ -222,27 +236,37 @@ export default function AdminManage() {
   };
 
   const deletePayment = async (payment) => {
-    if (!window.confirm(`Delete payment ${payment.paymentId || ""}?`)) return;
-
-    try {
-      await axios.delete(`${API}/api/admin/payments/${payment._id}`, { headers: { Authorization: `Bearer ${token}` } });
-      await loadAll();
-      showToast("Payment deleted.");
-    } catch (error) {
-      showToast(error.response?.data?.message || "Unable to delete payment.", "error");
-    }
+    openConfirm({
+      message: `Delete payment ${payment.paymentId || ""}?`,
+      severity: "warning",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${API}/api/admin/payments/${payment._id}`, { headers: { Authorization: `Bearer ${token}` } });
+          await loadAll();
+          showToast("Payment deleted.");
+        } catch (error) {
+          showToast(error.response?.data?.message || "Unable to delete payment.", "error");
+        }
+      },
+    });
   };
 
   const deletePlan = async (planId) => {
-    if (!window.confirm("Delete this plan?")) return;
-
-    try {
-      await axios.delete(`${API}/api/plan-catalog/${planId}`, { headers: { Authorization: `Bearer ${token}` } });
-      await loadAll();
-      showToast("Plan deleted.");
-    } catch (error) {
-      showToast("Unable to delete plan.", "error");
-    }
+    openConfirm({
+      message: "Delete this plan?",
+      severity: "warning",
+      confirmLabel: "Delete",
+      onConfirm: async () => {
+        try {
+          await axios.delete(`${API}/api/plan-catalog/${planId}`, { headers: { Authorization: `Bearer ${token}` } });
+          await loadAll();
+          showToast("Plan deleted.");
+        } catch (error) {
+          showToast(error.response?.data?.message || "Unable to delete plan.", "error");
+        }
+      },
+    });
   };
 
   return (
@@ -267,7 +291,7 @@ export default function AdminManage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => navigate(-1)} style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid rgba(169,126,39,0.14)", background: "#fff", cursor: "pointer" }}>
+            <button onClick={() => goBackOrFallback(navigate, location, "/Home")} style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid rgba(169,126,39,0.14)", background: "#fff", cursor: "pointer" }}>
               <ArrowBackIcon sx={{ color: "#6b4d26", fontSize: 18 }} />
             </button>
             <div>
@@ -332,6 +356,19 @@ export default function AdminManage() {
                     </div>
                   ))}
                   {!insights?.overdueSchemes?.length ? <div style={{ color: "#85684a" }}>No overdue schemes right now.</div> : null}
+                </div>
+              </Panel>
+
+              <Panel>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#3e2b16" }}>Collection Breakdown</div>
+                <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                  {(collectionSummary?.bySource || []).map((item) => (
+                    <div key={item._id || "unknown"} style={{ padding: 12, borderRadius: 14, background: "#fffdf8", border: "1px solid rgba(169,126,39,0.12)" }}>
+                      <div style={{ fontWeight: 700, color: "#3e2b16", textTransform: "capitalize" }}>{item._id || "customer"}</div>
+                      <div style={{ color: "#85684a", marginTop: 4 }}>Rs {Number(item.totalAmount || 0).toLocaleString("en-IN")} • {item.count} payments</div>
+                    </div>
+                  ))}
+                  {!collectionSummary?.bySource?.length ? <div style={{ color: "#85684a" }}>No collection summary available yet.</div> : null}
                 </div>
               </Panel>
             </div>
@@ -605,6 +642,35 @@ export default function AdminManage() {
 
       <Snackbar open={toast.open} autoHideDuration={3200} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>
         <Alert severity={toast.severity} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>{toast.message}</Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={Boolean(confirmAction)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        onClose={closeConfirm}
+      >
+        <Alert
+          severity={confirmAction?.severity || "warning"}
+          onClose={closeConfirm}
+          action={(
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button color="inherit" size="small" onClick={closeConfirm}>Cancel</Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={async () => {
+                  const action = confirmAction;
+                  closeConfirm();
+                  await action?.onConfirm?.();
+                }}
+              >
+                {confirmAction?.confirmLabel || "Confirm"}
+              </Button>
+            </Box>
+          )}
+        >
+          {confirmAction?.message || ""}
+        </Alert>
       </Snackbar>
     </div>
   );

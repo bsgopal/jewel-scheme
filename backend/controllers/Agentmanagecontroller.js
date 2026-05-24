@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const AgentAssignment = require('../models/AgentAssignment');
+const Scheme = require('../models/Scheme');
 
 // ─── GET /api/agents ──────────────────────────────────────────────────────────
 // Returns all users with role = 'agent', with their assigned customer count
@@ -129,11 +130,18 @@ exports.getAgentCustomers = async (req, res, next) => {
     const assignments = await AgentAssignment.find({
       agent: req.params.id,
       active: true,
-    }).populate('customer', 'name email phone customerId');
+    }).populate('customer', 'name email phone customerId address')
+      .populate('scheme', 'schemeName schemeId');
 
     const customers = assignments
       .filter(a => a.customer) // skip if customer was deleted
-      .map(a => a.customer);
+      .map(a => ({
+        ...a.customer.toObject(),
+        assignmentType: a.assignmentType,
+        assignmentArea: a.area || '',
+        assignmentScheme: a.scheme || null,
+        assignmentNotes: a.notes || ''
+      }));
 
     res.status(200).json({ success: true, data: customers });
   } catch (error) {
@@ -146,11 +154,7 @@ exports.getAgentCustomers = async (req, res, next) => {
 // Body: { customerIds: ["id1", "id2", ...] }
 exports.assignCustomers = async (req, res, next) => {
   try {
-    const { customerIds } = req.body;
-
-    if (!Array.isArray(customerIds) || customerIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'customerIds array is required.' });
-    }
+    const { customerIds, assignmentType = 'customer', area, schemeId } = req.body;
 
     const agentId = req.params.id;
 
@@ -160,11 +164,45 @@ exports.assignCustomers = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Agent not found.' });
     }
 
+    let resolvedCustomerIds = Array.isArray(customerIds) ? [...new Set(customerIds)] : [];
+
+    if (assignmentType === 'area') {
+      if (!area) {
+        return res.status(400).json({ success: false, message: 'Area is required for area-wise assignment.' });
+      }
+
+      const areaCustomers = await User.find({
+        role: 'customer',
+        $or: [
+          { 'address.area': { $regex: `^${area}$`, $options: 'i' } },
+          { 'address.city': { $regex: `^${area}$`, $options: 'i' } }
+        ]
+      }).select('_id');
+
+      resolvedCustomerIds = areaCustomers.map((item) => item._id.toString());
+    }
+
+    if (assignmentType === 'plan') {
+      if (!schemeId) {
+        return res.status(400).json({ success: false, message: 'Plan or scheme ID is required for plan-wise assignment.' });
+      }
+
+      const schemeCustomers = await Scheme.find({
+        $or: [{ _id: schemeId }, { schemeName: schemeId }]
+      }).select('user');
+
+      resolvedCustomerIds = [...new Set(schemeCustomers.map((item) => item.user?.toString()).filter(Boolean))];
+    }
+
+    if (!resolvedCustomerIds.length) {
+      return res.status(400).json({ success: false, message: 'No customers found for the selected assignment rule.' });
+    }
+
     // For each customer, upsert an assignment (avoid duplicates)
-    const ops = customerIds.map(custId => ({
+    const ops = resolvedCustomerIds.map(custId => ({
       updateOne: {
         filter: { agent: agentId, customer: custId },
-        update: { $set: { agent: agentId, customer: custId, active: true, assignedAt: new Date() } },
+        update: { $set: { agent: agentId, customer: custId, active: true, assignedAt: new Date(), assignmentType, area: area || '', scheme: schemeId || null } },
         upsert: true,
       },
     }));
@@ -173,7 +211,7 @@ exports.assignCustomers = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `${customerIds.length} customer(s) assigned successfully.`,
+      message: `${resolvedCustomerIds.length} customer(s) assigned successfully.`,
     });
   } catch (error) {
     next(error);

@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 import axios from "axios";
 import { Alert, Snackbar } from "@mui/material";
 import {
@@ -21,13 +18,16 @@ import {
 import Sidemenu from "./Sidemenu";
 import logo from "./renic-tech-logo.svg";
 import RenicCopyright from "./common/RenicCopyright";
+import SmoothCarousel from "./common/SmoothCarousel";
+import SmoothGridCarousel from "./common/SmoothGridCarousel";
+import { getStoredRole, hasRequiredRole, isAdminLike } from "../utils/permissions";
 
 const API = process.env.REACT_APP_API_URL;
 
 const allFeatures = [
   { label: "Join Scheme", icon: WorkspacePremium, roles: ["customer", "admin", "staff"], route: "/newplan" },
   { label: "My Plans", icon: Assignment, roles: ["customer", "admin", "staff"], route: "/my-plans" },
-  { label: "Wallet", icon: AccountBalanceWallet, roles: ["customer", "admin", "staff"], route: "/wallet" },
+  { label: "Digi Gold Wallet", icon: AccountBalanceWallet, roles: ["customer", "admin", "staff"], route: "/wallet" },
   { label: "Offers", icon: LocalOffer, roles: ["customer", "admin", "staff", "agent"], route: "/offers" },
   { label: "Manage Center", icon: PeopleOutline, roles: ["admin"], route: "/admin-manage" },
   { label: "Create User", icon: GroupAdd, roles: ["admin"], route: "/CreateAccount" },
@@ -41,17 +41,6 @@ const allFeatures = [
   { label: "Manage Agents", icon: GroupAdd, roles: ["admin"], route: "/admin/agents" },
 ];
 
-const sliderSettings = {
-  arrows: false,
-  dots: true,
-  infinite: true,
-  autoplay: true,
-  speed: 550,
-  autoplaySpeed: 4000,
-  slidesToShow: 1,
-  slidesToScroll: 1,
-};
-
 const getImageUrl = (path) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
@@ -64,8 +53,12 @@ function FeatureCard({ item, onClick }) {
   return (
     <motion.button
       className="home-feature-card"
-      whileHover={{ y: -3 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ 
+        y: -8,
+        boxShadow: '0 24px 48px rgba(133, 104, 74, 0.15)',
+        transition: { duration: 0.3 }
+      }}
+      whileTap={{ scale: 0.96 }}
       onClick={onClick}
       style={{
         border: "1px solid rgba(169, 126, 39, 0.14)",
@@ -82,10 +75,13 @@ function FeatureCard({ item, onClick }) {
         gap: 16,
         minHeight: 148,
         width: "100%",
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
-      <div
+      <motion.div
         className="home-feature-icon"
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        transition={{ duration: 0.3 }}
         style={{
           width: 48,
           height: 48,
@@ -94,16 +90,24 @@ function FeatureCard({ item, onClick }) {
           placeItems: "center",
           background: "linear-gradient(135deg, #fff2d2 0%, #efd08d 100%)",
           color: "#8c6518",
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <Icon />
-      </div>
+      </motion.div>
       <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div className="home-feature-label" style={{ fontWeight: 800, color: "#3e2b16", fontSize: 15, lineHeight: 1.15 }}>
+        <motion.div 
+          className="home-feature-label" 
+          style={{ fontWeight: 800, color: "#3e2b16", fontSize: 15, lineHeight: 1.15 }}
+          whileHover={{ color: '#c89b3c' }}
+          transition={{ duration: 0.2 }}
+        >
           {item.label}
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className="home-feature-arrow"
+          whileHover={{ x: 4 }}
+          transition={{ duration: 0.2 }}
           style={{
             width: 28,
             height: 28,
@@ -114,10 +118,11 @@ function FeatureCard({ item, onClick }) {
             placeItems: "center",
             fontSize: 15,
             flexShrink: 0,
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           ›
-        </div>
+        </motion.div>
       </div>
     </motion.button>
   );
@@ -125,11 +130,28 @@ function FeatureCard({ item, onClick }) {
 
 function SectionHead({ title, action, onClick }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-      <div style={{ fontSize: 24, fontWeight: 800, color: "#3e2b16" }}>{title}</div>
+    <motion.div 
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5 }}
+      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}
+    >
+      <motion.div 
+        style={{ fontSize: 24, fontWeight: 800, color: "#3e2b16" }}
+        whileHover={{ color: '#c89b3c' }}
+        transition={{ duration: 0.2 }}
+      >
+        {title}
+      </motion.div>
       {action ? (
-        <button
+        <motion.button
           onClick={onClick}
+          whileHover={{ 
+            scale: 1.05,
+            boxShadow: '0 8px 20px rgba(169, 126, 39, 0.15)',
+            background: 'rgba(200, 155, 60, 0.08)',
+          }}
+          whileTap={{ scale: 0.95 }}
           style={{
             border: "1px solid rgba(169,126,39,0.12)",
             background: "#fff",
@@ -138,12 +160,13 @@ function SectionHead({ title, action, onClick }) {
             color: "#6f5334",
             cursor: "pointer",
             fontWeight: 700,
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           {action}
-        </button>
+        </motion.button>
       ) : null}
-    </div>
+    </motion.div>
   );
 }
 
@@ -156,11 +179,17 @@ export default function Home() {
   const [agentStats, setAgentStats] = useState(null);
   const [pending, setPending] = useState([]);
   const [updateNotice, setUpdateNotice] = useState({ open: false, message: "" });
-  const role = (localStorage.getItem("role") || "customer").toLowerCase();
-  const isAdmin = role === "admin";
-  const name = localStorage.getItem("name") || "Guest";
+  const role = getStoredRole() || "customer";
+  const isAdmin = isAdminLike(role);
   const guest = localStorage.getItem("isGuest") === "true";
   const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (guest) return;
+    if (role === "agent") {
+      navigate("/agent-dashboard", { replace: true });
+    }
+  }, [guest, navigate, role]);
 
   useEffect(() => {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -190,7 +219,7 @@ export default function Home() {
   }, [guest, token]);
 
   useEffect(() => {
-    if (role !== "agent" || !token) return;
+    if (!["agent", "admin"].includes(role) || !token) return;
 
     const headers = { Authorization: `Bearer ${token}` };
     Promise.all([
@@ -238,7 +267,7 @@ export default function Home() {
   const features = useMemo(
     () =>
       allFeatures
-        .filter((item) => (guest ? item.roles.includes("customer") : item.roles.includes(role)))
+        .filter((item) => (guest ? item.roles.includes("customer") : hasRequiredRole(item.roles, role)))
         .map((item) => {
           if (isAdmin && item.label === "Join Scheme") {
             return { ...item, label: "Create Scheme", route: "/newplan" };
@@ -387,61 +416,82 @@ export default function Home() {
             className="home-hero-shell"
             style={{
               borderRadius: 26,
-              overflow: "hidden",
-              border: "1px solid rgba(169, 126, 39, 0.12)",
-              boxShadow: "0 22px 48px rgba(133, 104, 74, 0.12)",
+              overflow: 'visible',
               background: "#fff",
             }}
           >
-            <Slider {...sliderSettings}>
-              {heroSlides.map((slide, index) => {
+            <SmoothCarousel
+              items={heroSlides}
+              itemsPerView={1}
+              autoScroll={true}
+              autoScrollSpeed={5000}
+              height="280px"
+              renderItem={(slide) => {
                 const imageUrl = getImageUrl(slide.image_url);
                 const background = imageUrl
                   ? `linear-gradient(90deg, rgba(56,34,14,0.82) 0%, rgba(56,34,14,0.55) 35%, rgba(56,34,14,0.2) 70%), url(${imageUrl})`
-                  : `linear-gradient(135deg, ${index % 2 === 0 ? "#6e3d1f 0%, #b27b36 100%" : "#4e2b19 0%, #9f4b2d 100%"})`;
+                  : `linear-gradient(135deg, ${Math.random() > 0.5 ? "#6e3d1f 0%, #b27b36 100%" : "#4e2b19 0%, #9f4b2d 100%"})`;
 
                 return (
-                  <div key={slide.id || slide.title}>
-                    <div
-                      className="home-hero-slide"
-                      style={{
-                        minHeight: 280,
-                        position: "relative",
-                        backgroundImage: background,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                        padding: "28px 22px",
-                        display: "flex",
-                        alignItems: "flex-end",
-                      }}
+                  <motion.div
+                    className="home-hero-slide"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      position: 'relative',
+                      backgroundImage: background,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      padding: "28px 22px",
+                      display: "flex",
+                      alignItems: "flex-end",
+                      borderRadius: 26,
+                    }}
+                  >
+                    <motion.div 
+                      className="home-hero-content" 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.2 }}
+                      style={{ maxWidth: 520, color: "#fff7eb" }}
                     >
-                      <div className="home-hero-content" style={{ maxWidth: 520, color: "#fff7eb" }}>
-                        <div className="home-hero-title" style={{ fontSize: "clamp(28px, 5vw, 46px)", lineHeight: 1.02, fontWeight: 800 }}>{slide.title}</div>
-                        {(slide.cta_label || slide.cta_route) && (
-                          <button
-                            className="home-hero-button"
-                            onClick={() => navigate(slide.cta_route || "/newplan")}
-                            style={{
-                              marginTop: 18,
-                              height: 44,
-                              borderRadius: 999,
-                              border: "1px solid rgba(255,255,255,0.18)",
-                              background: "rgba(255,255,255,0.14)",
-                              color: "#fff",
-                              padding: "0 18px",
-                              cursor: "pointer",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {slide.cta_label || "Explore"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                      <motion.div 
+                        className="home-hero-title" 
+                        style={{ fontSize: "clamp(28px, 5vw, 46px)", lineHeight: 1.02, fontWeight: 800 }}
+                      >
+                        {slide.title}
+                      </motion.div>
+                      {(slide.cta_label || slide.cta_route) && (
+                        <motion.button
+                          className="home-hero-button"
+                          onClick={() => navigate(slide.cta_route || "/newplan")}
+                          whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(0,0,0,0.2)' }}
+                          whileTap={{ scale: 0.98 }}
+                          style={{
+                            marginTop: 18,
+                            height: 44,
+                            borderRadius: 999,
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            background: "rgba(255,255,255,0.14)",
+                            color: "#fff",
+                            padding: "0 18px",
+                            cursor: "pointer",
+                            fontWeight: 700,
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            backdropFilter: 'blur(8px)',
+                          }}
+                        >
+                          {slide.cta_label || "Explore"}
+                        </motion.button>
+                      )}
+                    </motion.div>
+                  </motion.div>
                 );
-              })}
-            </Slider>
+              }}
+            />
           </div>
 
           <div
@@ -452,49 +502,70 @@ export default function Home() {
               gap: 14,
             }}
           >
-            {statCards.map((item) => (
-              <div
+            {statCards.map((item, idx) => (
+              <motion.div
                 key={item.label}
                 className="home-stat-card"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                whileHover={{ 
+                  y: -6,
+                  boxShadow: '0 20px 40px rgba(133, 104, 74, 0.15)',
+                  transition: { duration: 0.3 }
+                }}
                 style={{
                   borderRadius: 18,
                   background: "rgba(255,255,255,0.86)",
                   border: "1px solid rgba(169,126,39,0.12)",
                   padding: 18,
                   boxShadow: "0 14px 30px rgba(133, 104, 74, 0.06)",
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
                 }}
               >
-                <div style={{ color: "#8a6b49", fontSize: 12 }}>{item.label}</div>
-                <div className="home-stat-value" style={{ marginTop: 8, color: "#3e2b16", fontSize: "clamp(22px, 4vw, 32px)", fontWeight: 800, lineHeight: 1.1 }}>{renderStatValue(item)}</div>
-              </div>
+                <motion.div 
+                  style={{ color: "#8a6b49", fontSize: 12 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.1 + 0.2 }}
+                >
+                  {item.label}
+                </motion.div>
+                <motion.div 
+                  className="home-stat-value" 
+                  style={{ marginTop: 8, color: "#3e2b16", fontSize: "clamp(22px, 4vw, 32px)", fontWeight: 800, lineHeight: 1.1 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 + 0.3, duration: 0.5 }}
+                >
+                  {renderStatValue(item)}
+                </motion.div>
+              </motion.div>
             ))}
           </div>
 
           {homeData.arrivals?.length ? (
             <div style={{ display: "grid", gap: 12 }}>
               <SectionHead title="New Arrivals" action="View all" onClick={() => navigate("/newarrivals")} />
-              <div
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  overflowX: "auto",
-                  paddingBottom: 8,
-                  scrollSnapType: "x proximity",
-                }}
-              >
-                {homeData.arrivals.map((item) => (
+              <SmoothGridCarousel
+                items={homeData.arrivals}
+                itemsPerRow={4}
+                autoScroll={true}
+                autoScrollSpeed={6000}
+                gap={14}
+                renderItem={(item) => (
                   <div
-                    key={item.id}
                     style={{
-                      minWidth: 220,
-                      maxWidth: 220,
                       background: "#fff",
                       borderRadius: 22,
                       overflow: "hidden",
                       border: "1px solid rgba(169,126,39,0.12)",
                       boxShadow: "0 14px 30px rgba(133,104,74,0.06)",
-                      scrollSnapAlign: "start",
                       flexShrink: 0,
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
                     }}
                   >
                     <div
@@ -505,7 +576,7 @@ export default function Home() {
                           : "linear-gradient(135deg, #f4dfb0 0%, #c98b5b 100%)",
                       }}
                     />
-                    <div style={{ padding: 14, display: "grid", gap: 6 }}>
+                    <div style={{ padding: 14, display: "grid", gap: 6, flex: 1 }}>
                       <div style={{ fontWeight: 800, color: "#3e2b16", fontSize: 17 }}>{item.title}</div>
                       <div style={{ fontWeight: 800, color: "#7b0000", fontSize: 26 }}>Rs {Number(item.price || 0).toLocaleString("en-IN")}</div>
                       {item.offer ? (
@@ -515,8 +586,8 @@ export default function Home() {
                       ) : null}
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              />
             </div>
           ) : null}
 
@@ -539,7 +610,7 @@ export default function Home() {
             >
               <div style={{ fontSize: 13, fontWeight: 800, color: "#a9771c", letterSpacing: 1.1, textTransform: "uppercase" }}>Account Snapshot</div>
               <div className="home-snapshot-title" style={{ marginTop: 10, fontSize: "clamp(28px, 5vw, 42px)", lineHeight: 1.04, fontWeight: 800, color: "#3e2b16" }}>
-                {guest ? "Browse current plans and rates." : `${name}, your ${isAdmin ? "admin" : "scheme"} dashboard is ready.`}
+                {guest ? "Browse current plans and rates." : `Your ${isAdmin ? "admin" : "scheme"} dashboard is ready.`}
               </div>
 
               {!guest && role !== "agent" && !isAdmin && (
@@ -576,7 +647,7 @@ export default function Home() {
                 </div>
               )}
 
-              {role === "agent" && (
+              {["agent", "admin"].includes(role) && (
                 <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
                   <div style={{ padding: 14, borderRadius: 16, background: "#fff", border: "1px solid rgba(169,126,39,0.12)" }}>
                     <div style={{ fontSize: 12, color: "#8a6b49" }}>Pending Collections</div>
@@ -593,7 +664,7 @@ export default function Home() {
             </div>
           </div>
 
-          {role === "agent" && pending.length > 0 ? (
+          {["agent", "admin"].includes(role) && pending.length > 0 ? (
             <div style={{ display: "grid", gap: 14 }}>
               <SectionHead title="Assigned Collections" action="Open Agent Desk" onClick={() => navigate("/agent-dashboard")} />
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
@@ -653,9 +724,17 @@ export default function Home() {
         <div style={{ marginTop: 28, display: "grid", gap: 18 }}>
           <SectionHead title="New Plan Highlights" action="Browse plans" onClick={() => navigate("/newplan")} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-            {homeData.plans?.slice(0, 3).map((plan) => (
-              <div
+            {homeData.plans?.slice(0, 3).map((plan, idx) => (
+              <motion.div
                 key={plan.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                whileHover={{ 
+                  y: -8,
+                  boxShadow: '0 24px 48px rgba(133, 104, 74, 0.15)',
+                  transition: { duration: 0.3 }
+                }}
                 style={{
                   background: "linear-gradient(180deg, #fff 0%, #fff8ec 100%)",
                   borderRadius: 22,
@@ -664,16 +743,48 @@ export default function Home() {
                   padding: 18,
                   display: "grid",
                   gap: 10,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#3e2b16" }}>{plan.name}</div>
-                  {plan.popular ? <span style={{ padding: "6px 10px", borderRadius: 999, background: "#fef1cc", color: "#a9771c", fontSize: 12, fontWeight: 800 }}>Popular</span> : null}
+                  <motion.div 
+                    style={{ fontSize: 22, fontWeight: 800, color: "#3e2b16" }}
+                    whileHover={{ color: '#c89b3c' }}
+                  >
+                    {plan.name}
+                  </motion.div>
+                  {plan.popular ? (
+                    <motion.span 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: idx * 0.1 + 0.3 }}
+                      style={{ padding: "6px 10px", borderRadius: 999, background: "#fef1cc", color: "#a9771c", fontSize: 12, fontWeight: 800 }}
+                    >
+                      Popular
+                    </motion.span>
+                  ) : null}
                 </div>
-                <div style={{ color: "#6f5334", lineHeight: 1.55 }}>{plan.description}</div>
-                <div style={{ fontWeight: 800, color: "#7b0000" }}>Starts from Rs {Number(plan.minAmount || 0).toLocaleString("en-IN")}</div>
-                <button
+                <motion.div 
+                  style={{ color: "#6f5334", lineHeight: 1.55 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.1 + 0.2 }}
+                >
+                  {plan.description}
+                </motion.div>
+                <motion.div 
+                  style={{ fontWeight: 800, color: "#7b0000" }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.1 + 0.3 }}
+                >
+                  Starts from Rs {Number(plan.minAmount || 0).toLocaleString("en-IN")}
+                </motion.div>
+                <motion.button
                   onClick={() => navigate("/newplan")}
+                  whileHover={{ scale: 1.05, boxShadow: '0 12px 32px rgba(123, 0, 0, 0.2)' }}
+                  whileTap={{ scale: 0.95 }}
                   style={{
                     marginTop: 8,
                     height: 42,
@@ -683,11 +794,12 @@ export default function Home() {
                     color: "#fff0c0",
                     cursor: "pointer",
                     fontWeight: 700,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
                   View plan
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -695,26 +807,50 @@ export default function Home() {
         <div style={{ marginTop: 28, display: "grid", gap: 18 }}>
           <SectionHead title="Active Offers" action="See offers" onClick={() => navigate("/offers")} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, paddingBottom: 24 }}>
-            {homeData.offers?.slice(0, 3).map((offer) => (
-              <div
+            {homeData.offers?.slice(0, 3).map((offer, idx) => (
+              <motion.div
                 key={offer.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                whileHover={{ 
+                  y: -8,
+                  boxShadow: '0 24px 48px rgba(133, 104, 74, 0.15)',
+                  transition: { duration: 0.3 }
+                }}
                 style={{
                   background: "#fff",
                   borderRadius: 22,
                   overflow: "hidden",
                   border: "1px solid rgba(169,126,39,0.12)",
                   boxShadow: "0 14px 30px rgba(133,104,74,0.06)",
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer',
                 }}
               >
                 {(offer.banner_url || offer.image_url) ? (
-                  <div style={{ height: 160, background: `center / cover no-repeat url(${getImageUrl(offer.banner_url || offer.image_url)})` }} />
+                  <motion.div 
+                    style={{ height: 160, background: `center / cover no-repeat url(${getImageUrl(offer.banner_url || offer.image_url)})` }}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.4 }}
+                  />
                 ) : null}
-                <div style={{ padding: 18, display: "grid", gap: 8 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#3e2b16" }}>{offer.title}</div>
+                <motion.div 
+                  style={{ padding: 18, display: "grid", gap: 8 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: idx * 0.1 + 0.2 }}
+                >
+                  <motion.div 
+                    style={{ fontSize: 20, fontWeight: 800, color: "#3e2b16" }}
+                    whileHover={{ color: '#c89b3c' }}
+                  >
+                    {offer.title}
+                  </motion.div>
                   <div style={{ color: "#8a6b49", fontWeight: 700 }}>{offer.subtitle}</div>
                   <div style={{ color: "#6f5334", lineHeight: 1.55 }}>{offer.description}</div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             ))}
           </div>
         </div>

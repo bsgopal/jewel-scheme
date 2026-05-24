@@ -15,6 +15,7 @@ import ManageNewArrivals from "./components/newarrivals/ManageNewArrivals";
 import ManageBanners from "./components/banners/ManageBanners";
 import MyPlans from "./components/MyPlans";
 import PlanDetails from "./components/PlanDetails";
+import PlanCatalogDetails from "./components/PlanCatalogDetails";
 import PaymentHistory from "./components/payment-history/paymentHistoryList";
 import PaymentHistoryDetails from "./components/payment-history/PaymentHistoryDetails";
 import ForgotPassword from "./components/forgot-password/ForgotPassword";
@@ -25,6 +26,7 @@ import Profile from "./components/Features/Profile";
 import AgentDashboard from "./components/Agent/AgentDashboard";
 import AgentAmountManagement from "./components/Agent/AgentAmountManagement";
 import AgentCollectInstallment from "./components/Agent/AgentCollectInstallment";
+import AgentCustomers from "./components/Agent/AgentCustomers";
 import AdminManage from "./components/admin/AdminManage";
 import ProtectedRoute from "./components/Features/ProtectedRoute";
 import OffersPage from "./components/offers/OffersPage";
@@ -37,6 +39,7 @@ import { PushNotifications } from "@capacitor/push-notifications";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import axios from "axios";
+import { getDefaultRoute, goBackOrFallback } from "./utils/navigation";
 
 function App() {
   const navigate = useNavigate();
@@ -44,6 +47,7 @@ function App() {
   const [plans, setPlans] = useState([]);
   const hasToken = Boolean(localStorage.getItem("token"));
   const isGuest = localStorage.getItem("isGuest") === "true";
+  const defaultRoute = getDefaultRoute({ hasToken, isGuest });
 
   axios.defaults.withCredentials = true;
 
@@ -66,11 +70,11 @@ function App() {
     });
 
     PushNotifications.addListener("registration", (token) => {
-      console.log("FCM TOKEN:", token.value);
+      // FCM token registered
     });
 
     PushNotifications.addListener("registrationError", (error) => {
-      console.error("FCM ERROR:", error);
+      // FCM registration error
     });
   }, []);
 
@@ -82,12 +86,12 @@ function App() {
     const registerBackHandler = async () => {
       backListener = await CapacitorApp.addListener("backButton", ({ canGoBack }) => {
         if (canGoBack || window.history.length > 1) {
-          navigate(-1);
+          goBackOrFallback(navigate, location, defaultRoute);
           return;
         }
 
-        if (location.pathname !== "/Home") {
-          navigate("/Home", { replace: true });
+        if (location.pathname !== defaultRoute) {
+          navigate(defaultRoute, { replace: true });
           return;
         }
 
@@ -100,7 +104,7 @@ function App() {
     return () => {
       backListener?.remove();
     };
-  }, [location.pathname, navigate]);
+  }, [defaultRoute, location, navigate]);
 
   const addNewPlan = (newPlanData) => {
     setPlans((prev) => [
@@ -119,8 +123,8 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={hasToken || isGuest ? <Navigate to="/Home" replace /> : <Login />} />
-      <Route path="/CreateAccount" element={<ProtectedRoute roles={["admin"]}><CreateAccount /></ProtectedRoute>} />
+      <Route path="/" element={hasToken || isGuest ? <Navigate to={defaultRoute} replace /> : <Login />} />
+      <Route path="/CreateAccount" element={<CreateAccount />} />
       <Route path="/otp" element={<OTP />} />
       <Route path="/forgotPassword" element={<ForgotPassword />} />
       <Route path="/verifyForgotOtp" element={<VerifyForgotOtp />} />
@@ -134,13 +138,15 @@ function App() {
       <Route path="/rateentry" element={<ProtectedRoute roles={["admin"]}><RateEntry /></ProtectedRoute>} />
       <Route path="/my-plans" element={<ProtectedRoute><MyPlans /></ProtectedRoute>} />
       <Route path="/plan-details/:id" element={<ProtectedRoute><PlanDetails /></ProtectedRoute>} />
+      <Route path="/catalog-plan-details/:id" element={<ProtectedRoute><PlanCatalogDetails /></ProtectedRoute>} />
       <Route path="/payment-history" element={<ProtectedRoute roles={["admin"]}><PaymentHistory /></ProtectedRoute>} />
       <Route path="/payment-history/:userId" element={<ProtectedRoute roles={["admin"]}><PaymentHistoryDetails /></ProtectedRoute>} />
       <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/agent-dashboard" element={<ProtectedRoute roles={["agent", "admin", "staff"]}><AgentDashboard /></ProtectedRoute>} />
       <Route path="/agent/dashboard" element={<Navigate to="/agent-dashboard" replace />} />
-      <Route path="/agent/manage-amounts" element={<ProtectedRoute roles={["agent", "admin", "staff"]}><AgentAmountManagement /></ProtectedRoute>} />
+      <Route path="/agent/customers" element={<ProtectedRoute roles={["agent", "admin"]}><AgentCustomers /></ProtectedRoute>} />
+      <Route path="/agent/manage-amounts" element={<ProtectedRoute roles={["admin"]}><AgentAmountManagement /></ProtectedRoute>} />
       <Route path="/agent/collect-installment" element={<ProtectedRoute roles={["agent", "admin", "staff"]}><AgentCollectInstallment /></ProtectedRoute>} />
       <Route path="/admin-manage" element={<ProtectedRoute roles={["admin"]}><AdminManage /></ProtectedRoute>} />
       <Route path="/createnewplan" element={<ProtectedRoute roles={["admin"]}><CreateNewPlan onCreatePlan={addNewPlan} /></ProtectedRoute>} />

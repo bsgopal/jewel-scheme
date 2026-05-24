@@ -54,6 +54,12 @@ const schemeSchema = new mongoose.Schema({
         required: [true, 'User is required'],
         index: true
     },
+    catalogPlan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PlanCatalog',
+        default: null,
+        index: true
+    },
     schemeName: {
         type: String,
         required: [true, 'Scheme name is required']
@@ -67,6 +73,10 @@ const schemeSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Monthly amount is required'],
         min: [100, 'Minimum amount is ₹100']
+    },
+    planAmount: {
+        type: Number,
+        default: null
     },
     totalInstallments: {
         type: Number,
@@ -83,6 +93,10 @@ const schemeSchema = new mongoose.Schema({
         default: 11
     },
     totalAmountPaid: {
+        type: Number,
+        default: 0
+    },
+    advanceAmount: {
         type: Number,
         default: 0
     },
@@ -173,6 +187,26 @@ schemeSchema.virtual('progress').get(function() {
     return ((this.paidInstallments / this.totalInstallments) * 100).toFixed(1);
 });
 
+schemeSchema.virtual('totalPlanAmount').get(function() {
+    return (this.planAmount || this.monthlyAmount || 0) * (this.totalInstallments || 0);
+});
+
+schemeSchema.virtual('remainingAmount').get(function() {
+    return Math.max(0, this.totalPlanAmount - (this.totalAmountPaid || 0));
+});
+
+schemeSchema.virtual('currentInstallmentBalance').get(function() {
+    const installmentAmount = this.planAmount || this.monthlyAmount || 0;
+    if (!installmentAmount) return 0;
+
+    const paidWithinCurrentInstallment = (this.totalAmountPaid || 0) % installmentAmount;
+    if (paidWithinCurrentInstallment === 0 && (this.totalAmountPaid || 0) > 0) {
+        return 0;
+    }
+
+    return Math.max(0, installmentAmount - paidWithinCurrentInstallment);
+});
+
 // Virtual for days remaining
 schemeSchema.virtual('daysRemaining').get(function() {
     if (!this.maturityDate) return 0;
@@ -210,6 +244,17 @@ schemeSchema.pre('save', function(next) {
         this.pendingInstallments = this.totalInstallments;
     }
     
+    const installmentAmount = this.planAmount || this.monthlyAmount || 0;
+    if (this.schemeType === 'flexible' && installmentAmount > 0) {
+        const completedInstallments = Math.min(
+            this.totalInstallments,
+            Math.floor((this.totalAmountPaid || 0) / installmentAmount)
+        );
+
+        this.paidInstallments = completedInstallments;
+        this.advanceAmount = Math.max(0, (this.totalAmountPaid || 0) - (completedInstallments * installmentAmount));
+    }
+
     // Update pending installments
     this.pendingInstallments = Math.max(0, this.totalInstallments - this.paidInstallments);
     next();

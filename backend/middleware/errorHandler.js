@@ -4,7 +4,7 @@ const errorHandler = (err, req, res, next) => {
 
     // Log error for development
     if (process.env.NODE_ENV === 'development') {
-        console.error('Error:', err);
+        // Error logged
     }
 
     // Mongoose bad ObjectId
@@ -17,13 +17,21 @@ const errorHandler = (err, req, res, next) => {
     if (err.code === 11000) {
         const field = Object.keys(err.keyValue)[0];
         const message = `Duplicate field value entered for ${field}. Please use another value.`;
-        error = { message, statusCode: 400 };
+        error = {
+            message,
+            statusCode: 400,
+            errors: [{ field, message }]
+        };
     }
 
     // Mongoose validation error
     if (err.name === 'ValidationError') {
-        const message = Object.values(err.errors).map(val => val.message).join(', ');
-        error = { message, statusCode: 400 };
+        const details = Object.values(err.errors).map((val) => ({
+            field: val.path,
+            message: val.message
+        }));
+        const message = details.map((item) => item.message).join(', ');
+        error = { message, statusCode: 400, errors: details };
     }
 
     // JWT errors
@@ -40,6 +48,7 @@ const errorHandler = (err, req, res, next) => {
     res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Server Error',
+        ...(error.errors && { errors: error.errors }),
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
 };

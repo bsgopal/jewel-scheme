@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Box, Typography, IconButton, CircularProgress } from "@mui/material";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Alert, Box, Button, CircularProgress, Snackbar } from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -9,30 +9,39 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { goBackOrFallback } from "../../utils/navigation";
 
 const API = process.env.REACT_APP_API_URL;
 
 export default function OfferDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const role = localStorage.getItem("role");
   const isAdmin = ["Admin", "SuperAdmin", "admin", "staff"].includes(role);
 
   const [offer, setOffer] = useState(null);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     axios.get(`${API}/api/offers/${id}`).then((res) => setOffer(res.data));
   }, [id]);
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this offer?")) return;
     setDeleting(true);
-    await axios.delete(`${API}/api/offers/${offer.id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
-    navigate("/offers");
+    try {
+      await axios.delete(`${API}/api/offers/${offer.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      navigate("/offers");
+    } catch (error) {
+      setToast({ open: true, message: error.response?.data?.message || "Unable to delete offer.", severity: "error" });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -76,7 +85,7 @@ export default function OfferDetails() {
       }}>
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate(-1)}
+          onClick={() => goBackOrFallback(navigate, location, "/offers")}
           style={{
             background: "#fff4e2", border: "1px solid rgba(169,118,28,0.15)",
             borderRadius: 10, padding: "6px 8px", cursor: "pointer",
@@ -113,7 +122,7 @@ export default function OfferDetails() {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={handleDelete}
+              onClick={() => setConfirmOpen(true)}
               disabled={deleting}
               style={{
                 background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)",
@@ -329,7 +338,7 @@ export default function OfferDetails() {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={handleDelete}
+                onClick={() => setConfirmOpen(true)}
                 disabled={deleting}
                 style={{
                   flex: 1, height: 46, borderRadius: 12,
@@ -348,6 +357,36 @@ export default function OfferDetails() {
           )}
         </motion.div>
       </div>
+
+      <Snackbar open={toast.open} autoHideDuration={3000} onClose={() => setToast((prev) => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert severity={toast.severity} onClose={() => setToast((prev) => ({ ...prev, open: false }))}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar open={confirmOpen} onClose={() => setConfirmOpen(false)} anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
+        <Alert
+          severity="warning"
+          onClose={() => setConfirmOpen(false)}
+          action={(
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button color="inherit" size="small" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={async () => {
+                  setConfirmOpen(false);
+                  await handleDelete();
+                }}
+              >
+                Delete
+              </Button>
+            </Box>
+          )}
+        >
+          Delete this offer?
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

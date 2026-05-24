@@ -37,6 +37,7 @@ export default function AgentCollectInstallment() {
   const [customVal,     setCustomVal]     = useState("");
   const [showCustom,    setShowCustom]    = useState(false);
   const [transactionId, setTransactionId] = useState("");
+  const [billNumber,    setBillNumber]    = useState("");
   const [loading,       setLoading]       = useState(true);
   const [collecting,    setCollecting]    = useState(false);
   const [error,         setError]         = useState("");
@@ -97,6 +98,7 @@ export default function AgentCollectInstallment() {
           amount:        finalAmount,
           paymentMethod,
           transactionId: transactionId.trim() || undefined,
+          billNumber:    billNumber.trim() || undefined,
           notes:         `Collected by agent`,
         },
         { headers: authHeaders() }
@@ -442,6 +444,25 @@ export default function AgentCollectInstallment() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: "0.58rem", fontWeight: 800, color: "#a9771c", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
+              Bill Number
+            </div>
+            <input
+              type="text"
+              value={billNumber}
+              onChange={e => setBillNumber(e.target.value)}
+              placeholder="Optional bill number"
+              style={{
+                width: "100%", padding: "11px 14px", borderRadius: 10,
+                border: "1.5px solid rgba(169,126,39,0.2)",
+                fontSize: "0.82rem", color: "#3e2b16",
+                background: "#fffaf5", outline: "none",
+                fontFamily: "'Montserrat',sans-serif", boxSizing: "border-box",
+              }}
+            />
+          </div>
         </div>
 
         {/* ── Summary ── */}

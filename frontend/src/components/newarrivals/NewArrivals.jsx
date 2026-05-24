@@ -4,7 +4,9 @@ import { Alert, Box, CircularProgress, Modal } from "@mui/material";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getDefaultRoute, goBackOrFallback } from "../../utils/navigation";
+import SmoothGridCarousel from "../common/SmoothGridCarousel";
 
 export default function NewArrivals() {
   const [arrivals, setArrivals] = useState([]);
@@ -14,6 +16,7 @@ export default function NewArrivals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const isAdmin = (localStorage.getItem("role") || "").toLowerCase() === "admin";
 
@@ -100,7 +103,7 @@ export default function NewArrivals() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => goBackOrFallback(navigate, location, getDefaultRoute())}
               style={{
                 width: 36,
                 height: 36,
@@ -168,15 +171,17 @@ export default function NewArrivals() {
             No arrivals added yet.
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-            {arrivals.map((arrival, index) => (
+          <SmoothGridCarousel
+            items={arrivals}
+            itemsPerRow={4}
+            autoScroll={true}
+            autoScrollSpeed={6000}
+            gap={16}
+            renderItem={(arrival, index) => (
               <motion.div
-                key={arrival.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setSelectedIndex(index);
                   setZoom(1);
@@ -189,6 +194,9 @@ export default function NewArrivals() {
                   boxShadow: "0 14px 30px rgba(133,104,74,0.06)",
                   cursor: "pointer",
                   position: "relative",
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
                 <div
@@ -234,7 +242,7 @@ export default function NewArrivals() {
                   style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
                 />
 
-                <div style={{ padding: "14px 14px 16px", display: "grid", gap: 6 }}>
+                <div style={{ padding: "14px 14px 16px", display: "grid", gap: 6, flex: 1 }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#3B0000" }}>{arrival.title}</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: "#8B0000" }}>Rs {Number(arrival.price || 0).toLocaleString("en-IN")}</div>
                   {arrival.offer ? (
@@ -254,8 +262,12 @@ export default function NewArrivals() {
                   ) : null}
                 </div>
               </motion.div>
-            ))}
-          </div>
+            )}
+            onItemClick={(item, index) => {
+              setSelectedIndex(index);
+              setZoom(1);
+            }}
+          />
         )}
       </div>
 

@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import logo from "./renic-tech-logo.svg";
 import RenicCopyright from "./common/RenicCopyright";
+import { isAdminLike } from "../utils/permissions";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -46,6 +47,14 @@ export default function Login() {
       setError("Please enter mobile number and password.");
       return;
     }
+    if (phone.length !== 10) {
+      setError("Mobile number must be 10 digits.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -53,20 +62,18 @@ export default function Login() {
     try {
       const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { phone, password }, { withCredentials: true });
       const user = res.data.data;
-      const isSuperAdmin = user.role === "admin" && user.phone === "9345578103";
 
       localStorage.setItem("token", user.token);
       localStorage.setItem("userId", user._id);
-      localStorage.setItem("phone", user.phone);
-      localStorage.setItem("name", user.name);
       localStorage.setItem("role", user.role);
-      localStorage.setItem("email", user.email);
-      localStorage.setItem("customerId", user.customerId);
-      localStorage.setItem("is_super_admin", isSuperAdmin ? "1" : "0");
       localStorage.removeItem("isGuest");
       axios.defaults.headers.common.Authorization = `Bearer ${user.token}`;
 
-      navigate("/Home");
+      const nextRoute = user.role === "agent"
+        ? "/agent-dashboard"
+        : "/Home";
+
+      navigate(nextRoute);
     } catch (err) {
       if (err.response?.data?.requiresVerification) {
         navigate("/otp", {

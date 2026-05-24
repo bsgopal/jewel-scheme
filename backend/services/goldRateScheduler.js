@@ -23,7 +23,7 @@ const initializeGoldRateScheduler = () => {
     }
 
     fetchAndStoreLiveRate().catch((error) => {
-        console.error('Initial gold rate refresh failed:', error.message);
+        // Initial gold rate refresh failed
     });
 
     schedulerHandle = setInterval(() => {
@@ -32,15 +32,13 @@ const initializeGoldRateScheduler = () => {
         }
 
         fetchAndStoreLiveRate().catch((error) => {
-            console.error('Scheduled gold rate refresh failed:', error.message);
+            // Scheduled gold rate refresh failed
         });
     }, 60 * 60 * 1000);
 
     if (typeof schedulerHandle.unref === 'function') {
         schedulerHandle.unref();
     }
-
-    console.log('Gold rate scheduler initialized');
 };
 
 module.exports = {

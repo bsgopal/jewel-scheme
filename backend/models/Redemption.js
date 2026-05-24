@@ -147,6 +147,15 @@ const redemptionSchema = new mongoose.Schema({
         type: String,
         enum: ['Cash', 'UPI', 'NetBanking', 'DebitCard', 'CreditCard', 'Mixed']
     },
+    billNumber: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    billingAmount: {
+        type: Number,
+        default: 0
+    },
     paymentTransactionId: String,
     refundAmount: {
         type: Number,

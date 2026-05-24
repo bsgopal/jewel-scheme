@@ -3,6 +3,8 @@ const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const Scheme = require('../models/Scheme');
 const User = require('../models/User');
+const AgentAssignment = require('../models/AgentAssignment');
+const Payment = require('../models/Payment');
 
 // ✅ ALL named routes BEFORE any /:id wildcard
 
@@ -105,7 +107,7 @@ router.get('/pending-installments', protect, authorize('admin', 'agent'), async 
             customerId: s.user?._id,
             customerName: s.user?.name || '—',
             planName: s.schemeName,
-            amount: s.monthlyAmount,
+            amount: Number(s.currentInstallmentBalance || s.planAmount || s.monthlyAmount || 0),
             nextDueDate: s.nextDueDate,
             phone: s.user?.phone,
         }));
@@ -123,9 +125,25 @@ router.get('/customers', protect, authorize('admin', 'agent'), async (req, res) 
     try {
         const { search, page = 1, limit = 20 } = req.query;
         let query = { role: 'customer' };
+        let assignmentRecords = [];
 
         if (req.user.role === 'agent') {
-            query.assignedAgent = req.user._id;
+            assignmentRecords = await AgentAssignment.find({
+                agent: req.user._id,
+                active: true
+            })
+                .select('customer assignmentType area scheme notes')
+                .populate('scheme', 'schemeName schemeId');
+
+            const customerIds = assignmentRecords
+                .map((assignment) => assignment.customer)
+                .filter(Boolean);
+
+            if (customerIds.length === 0) {
+                return res.json({ success: true, count: 0, total: 0, data: [] });
+            }
+
+            query._id = { $in: customerIds };
         }
 
         if (search) {
@@ -144,7 +162,124 @@ router.get('/customers', protect, authorize('admin', 'agent'), async (req, res) 
             .limit(parseInt(limit));
 
         const total = await User.countDocuments(query);
-        res.json({ success: true, count: users.length, total, data: users });
+
+        let data = users;
+        const visibleCustomerIds = users.map((user) => user._id);
+
+        if (req.user.role === 'agent') {
+            assignmentRecords = assignmentRecords.filter((assignment) =>
+                visibleCustomerIds.some((customerId) => String(customerId) === String(assignment.customer))
+            );
+
+            const assignmentMap = new Map(
+                assignmentRecords.map((assignment) => [
+                    String(assignment.customer),
+                    assignment
+                ])
+            );
+
+            data = users.map((user) => {
+                const assignment = assignmentMap.get(String(user._id));
+                return {
+                    ...user.toObject(),
+                    assignmentType: assignment?.assignmentType || 'customer',
+                    assignmentArea: assignment?.area || '',
+                    assignmentScheme: assignment?.scheme || null,
+                    assignmentNotes: assignment?.notes || ''
+                    };
+                });
+        }
+
+        if (visibleCustomerIds.length > 0) {
+            const [schemes, latestPayments] = await Promise.all([
+                Scheme.find({
+                    user: { $in: visibleCustomerIds },
+                    status: { $in: ['active', 'matured'] }
+                })
+                    .select('user schemeName schemeId monthlyAmount planAmount currentInstallmentBalance totalAmountPaid nextDueDate lastPaymentDate status')
+                    .sort({ nextDueDate: 1 }),
+                Payment.aggregate([
+                    {
+                        $match: {
+                            user: { $in: visibleCustomerIds },
+                            status: 'completed'
+                        }
+                    },
+                    { $sort: { paymentDate: -1 } },
+                    {
+                        $group: {
+                            _id: '$user',
+                            lastPaymentDate: { $first: '$paymentDate' },
+                            lastPaymentAmount: { $first: '$amount' },
+                            lastPaymentMethod: { $first: '$paymentMethod' }
+                        }
+                    }
+                ])
+            ]);
+
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+
+            const schemeMap = new Map();
+            schemes.forEach((scheme) => {
+                const key = String(scheme.user);
+                if (!schemeMap.has(key)) {
+                    schemeMap.set(key, []);
+                }
+                schemeMap.get(key).push(scheme);
+            });
+
+            const paymentMap = new Map(
+                latestPayments.map((payment) => [String(payment._id), payment])
+            );
+
+            data = data.map((customer) => {
+                const customerId = String(customer._id);
+                const customerSchemes = schemeMap.get(customerId) || [];
+                const activeSchemes = customerSchemes.filter((scheme) => scheme.status === 'active');
+                const dueSchemes = activeSchemes.filter((scheme) => scheme.nextDueDate && new Date(scheme.nextDueDate) <= todayEnd);
+                const overdueSchemes = activeSchemes.filter((scheme) => scheme.nextDueDate && new Date(scheme.nextDueDate) < new Date());
+                const currentPlan = activeSchemes[0] || null;
+                const nextDueDate = activeSchemes
+                    .filter((scheme) => scheme.nextDueDate)
+                    .sort((a, b) => new Date(a.nextDueDate) - new Date(b.nextDueDate))[0]?.nextDueDate || null;
+                const lastPayment = paymentMap.get(customerId) || null;
+
+                return {
+                    ...customer,
+                    activeSchemeCount: activeSchemes.length,
+                    maturedSchemeCount: customerSchemes.filter((scheme) => scheme.status === 'matured').length,
+                    dueSchemeCount: dueSchemes.length,
+                    overdueSchemeCount: overdueSchemes.length,
+                    dueAmount: dueSchemes.reduce((sum, scheme) => sum + Number(scheme.currentInstallmentBalance || scheme.planAmount || scheme.monthlyAmount || 0), 0),
+                    totalSchemePaid: customerSchemes.reduce((sum, scheme) => sum + Number(scheme.totalAmountPaid || 0), 0),
+                    nextDueDate,
+                    currentPlan: currentPlan ? {
+                        id: currentPlan._id,
+                        schemeId: currentPlan.schemeId,
+                        schemeName: currentPlan.schemeName,
+                        amount: Number(currentPlan.currentInstallmentBalance || currentPlan.planAmount || currentPlan.monthlyAmount || 0),
+                        nextDueDate: currentPlan.nextDueDate,
+                        status: currentPlan.status
+                    } : null,
+                    assignedSchemes: activeSchemes.slice(0, 3).map((scheme) => ({
+                        id: scheme._id,
+                        schemeId: scheme.schemeId,
+                        schemeName: scheme.schemeName,
+                        amount: Number(scheme.currentInstallmentBalance || scheme.planAmount || scheme.monthlyAmount || 0),
+                        nextDueDate: scheme.nextDueDate,
+                        status: scheme.status
+                    })),
+                    lastPayment: lastPayment ? {
+                        date: lastPayment.lastPaymentDate,
+                        amount: lastPayment.lastPaymentAmount,
+                        method: lastPayment.lastPaymentMethod
+                    } : null
+                };
+            });
+        }
+
+        res.json({ success: true, count: data.length, total, data });
 
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });

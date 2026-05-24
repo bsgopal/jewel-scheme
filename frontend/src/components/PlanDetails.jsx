@@ -42,7 +42,7 @@ const PlanDetails = () => {
         setScheme(data);
         setPayments(data.payments || data.installmentHistory || []);
       } catch (err) {
-        console.error("Error fetching scheme details:", err);
+        // Error fetching scheme details
         setSnackbar({ open: true, message: "Failed to load plan details", severity: "error" });
       } finally {
         setLoading(false);
@@ -74,6 +74,10 @@ const PlanDetails = () => {
   const currentValue    = scheme?.currentValue      || 0;
   const profit          = scheme?.profit            || 0;
   const profitPct       = scheme?.profitPercentage  || 0;
+  const isFlexiblePlan  = (scheme?.schemeType || "").toLowerCase() === "flexible";
+  const remainingAmount = Number(scheme?.remainingAmount || 0);
+  const currentInstallmentBalance = Number(scheme?.currentInstallmentBalance || monthlyAmount || 0);
+  const advanceAmount = Number(scheme?.advanceAmount || 0);
 
   const statusColor = {
     active:    { bg: "rgba(46,204,113,0.15)",  border: "rgba(46,204,113,0.4)",  text: "#27AE60" },
@@ -298,6 +302,13 @@ const PlanDetails = () => {
               ["Next Due Date",     isActive ? nextDueDate : "—"],
               ["Gold Accumulated",  `${goldWeight?.toFixed(4)} grams`],
               ["Bonus Gold",        `${(scheme?.bonusGoldWeight || 0).toFixed(4)} grams`],
+              ...(isFlexiblePlan
+                ? [
+                    ["Remaining Amount", `Rs ${remainingAmount.toLocaleString()}`],
+                    ["Current Due", `Rs ${currentInstallmentBalance.toLocaleString()}`],
+                    ["Advance Carry", `Rs ${advanceAmount.toLocaleString()}`],
+                  ]
+                : []),
             ].map(([k, v], i, arr) => (
               <div key={k} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -322,7 +333,7 @@ const PlanDetails = () => {
               <div>
                 <div style={{ fontSize: "0.62rem", color: "#999", marginBottom: 4 }}>NEXT INSTALLMENT</div>
                 <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#3B0000", fontFamily: "'Playfair Display', serif" }}>
-                  ₹{monthlyAmount?.toLocaleString()}
+                  ₹{(isFlexiblePlan ? currentInstallmentBalance : monthlyAmount)?.toLocaleString()}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
                   <CalendarMonthIcon style={{ fontSize: 13, color: "#8B0000" }} />
@@ -354,7 +365,7 @@ const PlanDetails = () => {
               }}
             >
               <PaymentIcon style={{ fontSize: 18 }} />
-              Pay ₹{monthlyAmount?.toLocaleString()} Now
+              Pay ₹{(isFlexiblePlan ? currentInstallmentBalance : monthlyAmount)?.toLocaleString()} Now
             </motion.button>
           </div>
         )}
@@ -498,6 +509,11 @@ const PlanDetails = () => {
                           {p.goldWeight && (
                             <div style={{ fontSize: "0.55rem", color: "#999", fontWeight: 500 }}>
                               {p.goldWeight?.toFixed(4)}g gold
+                            </div>
+                          )}
+                          {p.billNumber && (
+                            <div style={{ fontSize: "0.55rem", color: "#999", fontWeight: 500 }}>
+                              Bill: {p.billNumber}
                             </div>
                           )}
                         </div>

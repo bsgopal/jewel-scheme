@@ -42,7 +42,7 @@ exports.protect = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        console.error('Auth middleware error:', error.message);
+        // Auth middleware error
         return res.status(401).json({
             success: false,
             message: 'Not authorized to access this route. Invalid token.'

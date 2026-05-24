@@ -34,6 +34,10 @@ export default function AgentDetail() {
   const [loadingAll, setLoadingAll]         = useState(false);
   const [search, setSearch]                 = useState("");
   const [assignSearch, setAssignSearch]     = useState("");
+  const [assignmentMode, setAssignmentMode] = useState("customer");
+  const [assignmentArea, setAssignmentArea] = useState("");
+  const [assignmentPlan, setAssignmentPlan] = useState("");
+  const [availablePlans, setAvailablePlans] = useState([]);
   const [selected, setSelected]             = useState([]);   // ids to assign
   const [assigning, setAssigning]           = useState(false);
   const [removingId, setRemovingId]         = useState(null);
@@ -73,10 +77,13 @@ export default function AgentDetail() {
     setLoadingAll(true);
     try {
       const res = await axios.get(`${API}/api/admin/users?role=customer`, { headers: authHeaders() });
+      const plansRes = await axios.get(`${API}/api/admin/schemes?limit=200`, { headers: authHeaders() });
       const all = res.data.data || res.data || [];
+      const planList = plansRes.data.data || [];
       // Exclude already assigned
       const assignedIds = new Set(assignedCustomers.map(c => c._id || c.id));
       setAllCustomers(all.filter(c => !assignedIds.has(c._id || c.id)));
+      setAvailablePlans(planList);
     } catch {
       setSnackbar({ open: true, message: "Failed to load customers", severity: "error" });
     } finally {
@@ -100,15 +107,28 @@ export default function AgentDetail() {
 
   // ── Confirm assign ────────────────────────────────────────────────────────
   const handleAssign = async () => {
-    if (selected.length === 0) return;
+    if (assignmentMode === "customer" && selected.length === 0) return;
+    if (assignmentMode === "area" && !assignmentArea.trim()) {
+      setSnackbar({ open: true, message: "Enter an area or city for area-wise assignment.", severity: "error" });
+      return;
+    }
+    if (assignmentMode === "plan" && !assignmentPlan) {
+      setSnackbar({ open: true, message: "Select a plan for plan-wise assignment.", severity: "error" });
+      return;
+    }
     setAssigning(true);
     try {
       await axios.post(
         `${API}/api/agents/${id}/assign-customers`,
-        { customerIds: selected },
+        {
+          customerIds: selected,
+          assignmentType: assignmentMode,
+          area: assignmentArea.trim(),
+          schemeId: assignmentPlan,
+        },
         { headers: authHeaders() }
       );
-      setSnackbar({ open: true, message: `${selected.length} customer(s) assigned!`, severity: "success" });
+      setSnackbar({ open: true, message: "Customers assigned successfully.", severity: "success" });
       setModalOpen(false);
       fetchAssigned();
     } catch (err) {
@@ -473,6 +493,54 @@ export default function AgentDetail() {
                 padding: "14px 16px 10px", flexShrink: 0,
                 borderBottom: "1px solid rgba(169,126,39,0.1)",
               }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
+                  {[
+                    ["customer", "Customer Wise"],
+                    ["area", "Area Wise"],
+                    ["plan", "Plan Wise"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setAssignmentMode(value)}
+                      style={{
+                        height: 38,
+                        borderRadius: 10,
+                        border: assignmentMode === value ? "none" : "1px solid rgba(169,126,39,0.18)",
+                        background: assignmentMode === value ? "linear-gradient(135deg, #c9a227, #a9771c)" : "#fffaf5",
+                        color: assignmentMode === value ? "#fff" : "#8a6b49",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: "0.68rem",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {assignmentMode === "area" && (
+                  <input
+                    value={assignmentArea}
+                    onChange={(e) => setAssignmentArea(e.target.value)}
+                    placeholder="Enter area or city"
+                    style={{ width: "100%", boxSizing: "border-box", marginBottom: 10, border: "1px solid rgba(169,126,39,0.18)", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", background: "#fffaf5", color: "#3e2b16", outline: "none" }}
+                  />
+                )}
+
+                {assignmentMode === "plan" && (
+                  <select
+                    value={assignmentPlan}
+                    onChange={(e) => setAssignmentPlan(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", marginBottom: 10, border: "1px solid rgba(169,126,39,0.18)", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", background: "#fffaf5", color: "#3e2b16", outline: "none" }}
+                  >
+                    <option value="">Select plan</option>
+                    {availablePlans.map((plan) => (
+                      <option key={plan._id} value={plan.schemeName}>{plan.schemeName} - {plan.user?.name || "Customer"}</option>
+                    ))}
+                  </select>
+                )}
+
+                {assignmentMode === "customer" && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 10,
                   background: "#fffaf5", border: "1px solid rgba(169,126,39,0.18)",
@@ -491,9 +559,10 @@ export default function AgentDetail() {
                   />
                   {assignSearch && <CloseIcon onClick={() => setAssignSearch("")} style={{ color: "#a9771c", fontSize: 16, cursor: "pointer" }} />}
                 </div>
+                )}
 
                 {/* Select all row */}
-                {filteredAll.length > 0 && (
+                {assignmentMode === "customer" && filteredAll.length > 0 && (
                   <div
                     onClick={toggleAll}
                     style={{
@@ -518,9 +587,13 @@ export default function AgentDetail() {
                   <div style={{ textAlign: "center", padding: "40px 0" }}>
                     <CircularProgress sx={{ color: "#a9771c" }} size={28} />
                   </div>
-                ) : filteredAll.length === 0 ? (
+                ) : assignmentMode === "customer" && filteredAll.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "40px 0", color: "#bbb", fontSize: "0.78rem" }}>
                     {assignSearch ? "No customers match" : "All customers are already assigned to this agent"}
+                  </div>
+                ) : assignmentMode !== "customer" ? (
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "#8a6b49", fontSize: "0.78rem" }}>
+                    {assignmentMode === "area" ? "Assign every customer from the entered area or city." : "Assign every customer having the selected scheme."}
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

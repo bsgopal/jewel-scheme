@@ -97,8 +97,8 @@ const getRateValue = (payload, currencyCode) => {
 };
 
 const fetchMetalRatesFromApi = async () => {
-    if (!METAL_API_KEY || METAL_API_KEY === 'your_api_key') {
-        throw new Error('METAL_API_KEY is not configured');
+    if (!METAL_API_KEY || METAL_API_KEY === 'your_api_key' || METAL_API_KEY === 'your_metalpriceapi_key') {
+        throw new Error('METAL_API_KEY is not configured. Please set METAL_API_KEY in .env file');
     }
 
     const [goldResponse, silverResponse] = await Promise.all([
@@ -235,7 +235,7 @@ const fetchAndStoreLiveRate = async () => {
 
         return GoldRate.create(rateData);
     } catch (error) {
-        console.error(`Failed to fetch live gold rates from ${GOLD_RATE_PROVIDER}:`, error.message);
+        // Failed to fetch live gold rates
         return null;
     }
 };
@@ -255,7 +255,7 @@ const getCurrentRateWithRefresh = async () => {
 
         return currentRate;
     } catch (error) {
-        console.error('Error getting current rate:', error.message);
+        // Error getting current rate
         return null;
     }
 };

@@ -9,14 +9,16 @@ import {
   IconButton,
   Typography,
 } from "@mui/material";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import { goBackOrFallback } from "../../utils/navigation";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 export default function PaymentHistoryDetails() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState(null);
 
@@ -58,7 +60,7 @@ export default function PaymentHistoryDetails() {
     <Box className="app-safe-shell" sx={{ py: 2 }}>
       <Box sx={{ maxWidth: 960, mx: "auto" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ color: "#b88324" }}>
+          <IconButton onClick={() => goBackOrFallback(navigate, location, "/payment-history")} sx={{ color: "#b88324" }}>
             <ArrowBackIosNewIcon />
           </IconButton>
           <Typography sx={{ fontSize: 26, fontWeight: 800, color: "#3e2b16" }}>{user.name}</Typography>

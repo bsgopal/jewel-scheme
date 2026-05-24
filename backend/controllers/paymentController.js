@@ -8,11 +8,33 @@ const {
     getRateForPurity
 } = require('../services/goldRateFetcher');
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+const calculateFlexibleProgress = (scheme, totalAmountPaid) => {
+    const installmentAmount = Number(scheme.planAmount || scheme.monthlyAmount || 0);
+    if (!installmentAmount) {
+        return { paidInstallments: scheme.paidInstallments || 0, advanceAmount: 0 };
+    }
+
+    const paidInstallments = Math.min(
+        Number(scheme.totalInstallments || 0),
+        Math.floor(Number(totalAmountPaid || 0) / installmentAmount)
+    );
+
+    return {
+        paidInstallments,
+        advanceAmount: Math.max(0, Number(totalAmountPaid || 0) - (paidInstallments * installmentAmount))
+    };
+};
+
+const getRazorpayClient = () => {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_ID.includes('xxxxx')) {
+        return null;
+    }
+
+    return new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET
+    });
+};
 
 // @desc    Create Razorpay order
 // @route   POST /api/payments/create-order
@@ -39,6 +61,14 @@ exports.createOrder = async (req, res, next) => {
             return res.status(404).json({
                 success: false,
                 message: 'Active scheme not found'
+            });
+        }
+
+        const razorpay = getRazorpayClient();
+        if (!razorpay) {
+            return res.status(500).json({
+                success: false,
+                message: 'Razorpay is not configured for this environment'
             });
         }
 
@@ -69,7 +99,7 @@ exports.createOrder = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error('Razorpay order creation error:', error);
+        // Razorpay order creation error
         next(error);
     }
 };
@@ -213,7 +243,7 @@ exports.verifyPayment = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error('Payment verification error:', error);
+        // Payment verification error
         next(error);
     }
 };
@@ -246,6 +276,7 @@ exports.getPaymentHistory = async (req, res, next) => {
 
         const payments = await Payment.find(query)
             .populate('scheme', 'schemeName schemeId monthlyAmount')
+            .populate('collectedBy', 'name role phone')
             .sort({ paymentDate: -1 })
             .skip(skip)
             .limit(parseInt(limit));
@@ -290,7 +321,8 @@ exports.getPaymentById = async (req, res, next) => {
             user: req.user._id
         })
         .populate('scheme', 'schemeName schemeId monthlyAmount totalGoldWeight')
-        .populate('user', 'name customerId phone email address');
+        .populate('user', 'name customerId phone email address')
+        .populate('collectedBy', 'name role phone');
 
         if (!payment) {
             return res.status(404).json({
@@ -321,6 +353,7 @@ exports.getReceipt = async (req, res, next) => {
         })
         .populate('scheme', 'schemeName schemeId goldPurity benefits')
         .populate('user', 'name customerId phone email address')
+        .populate('collectedBy', 'name role phone')
         .populate('branch', 'branchName branchCode address phone gstNumber');
 
         if (!payment) {
@@ -352,7 +385,13 @@ exports.getReceipt = async (req, res, next) => {
                 gst: payment.gstAmount,
                 total: payment.totalAmount,
                 method: payment.paymentMethod,
-                transactionId: payment.razorpayPaymentId || payment.transactionId
+                transactionId: payment.razorpayPaymentId || payment.transactionId,
+                collectedBy: payment.collectedBy ? {
+                    name: payment.collectedBy.name,
+                    role: payment.collectedBy.role,
+                    phone: payment.collectedBy.phone
+                } : null,
+                billNumber: payment.billNumber || ''
             },
             gold: {
                 rate: payment.goldRateAtPayment,
@@ -408,6 +447,140 @@ exports.downloadReceipt = async (req, res, next) => {
     }
 };
 
+// @desc    Create manual payment / collection
+// @route   POST /api/payments
+// @access  Private
+exports.createManualPayment = async (req, res, next) => {
+    try {
+        const { scheme: schemeId, amount, paymentMethod, transactionId, notes, user: requestedUserId, billNumber } = req.body;
+        const numericAmount = Number(amount || 0);
+
+        if (!schemeId || numericAmount <= 0 || !paymentMethod) {
+            return res.status(400).json({
+                success: false,
+                message: 'Scheme, amount and payment method are required'
+            });
+        }
+
+        const scheme = await Scheme.findById(schemeId);
+        if (!scheme) {
+            return res.status(404).json({ success: false, message: 'Scheme not found' });
+        }
+
+        const targetUserId = requestedUserId || scheme.user?.toString();
+        const isPrivilegedCollector = ['admin', 'staff', 'agent'].includes(req.user.role);
+        if (!isPrivilegedCollector && String(targetUserId) !== String(req.user._id)) {
+            return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+
+        if (String(scheme.user) !== String(targetUserId)) {
+            return res.status(400).json({ success: false, message: 'Scheme does not belong to the selected customer' });
+        }
+
+        if (scheme.status !== 'active') {
+            return res.status(400).json({ success: false, message: 'Only active schemes can receive payments' });
+        }
+
+        const totalPlanAmount = Number((scheme.planAmount || scheme.monthlyAmount || 0) * (scheme.totalInstallments || 0));
+        if (Number(scheme.totalAmountPaid || 0) >= totalPlanAmount) {
+            return res.status(400).json({ success: false, message: 'This scheme is already fully paid and ready for redemption' });
+        }
+
+        if (scheme.schemeType !== 'flexible' && numericAmount !== Number(scheme.monthlyAmount)) {
+            return res.status(400).json({
+                success: false,
+                message: `This plan accepts only the fixed installment amount of Rs ${Number(scheme.monthlyAmount).toLocaleString('en-IN')}`
+            });
+        }
+
+        const currentRate = await getCurrentRateWithRefresh();
+        if (!currentRate) {
+            return res.status(400).json({ success: false, message: 'Gold rate not available' });
+        }
+
+        const goldRate = getRateForPurity(currentRate, scheme.goldPurity);
+        const goldWeight = parseFloat((numericAmount / goldRate).toFixed(4));
+        const bonusPercentage = typeof scheme.calculateBonus === 'function' ? scheme.calculateBonus() : 0;
+        const bonusWeight = parseFloat((goldWeight * bonusPercentage / 100).toFixed(4));
+        const totalGoldWeight = goldWeight + bonusWeight;
+        const nextTotalAmountPaid = Number(scheme.totalAmountPaid || 0) + numericAmount;
+        const flexibleProgress = calculateFlexibleProgress(scheme, nextTotalAmountPaid);
+
+        const installmentNumber = scheme.schemeType === 'flexible'
+            ? Math.min(scheme.totalInstallments, flexibleProgress.paidInstallments + (flexibleProgress.advanceAmount > 0 ? 1 : 0))
+            : Number(scheme.paidInstallments || 0) + 1;
+
+        const payment = await Payment.create({
+            user: targetUserId,
+            scheme: scheme._id,
+            amount: numericAmount,
+            goldRateAtPayment: goldRate,
+            goldWeightCredited: goldWeight,
+            bonusGoldWeight: bonusWeight,
+            totalGoldWeight,
+            paymentMethod,
+            transactionId,
+            status: 'completed',
+            completedAt: new Date(),
+            installmentNumber,
+            gstAmount: parseFloat((numericAmount * 0.03).toFixed(2)),
+            totalAmount: numericAmount,
+            collectedBy: isPrivilegedCollector ? req.user._id : undefined,
+            collectionSource: isPrivilegedCollector ? req.user.role : 'customer',
+            notes: notes || (isPrivilegedCollector ? `Collected by ${req.user.role}` : ''),
+            billNumber: billNumber || ''
+        });
+
+        scheme.totalAmountPaid = nextTotalAmountPaid;
+        scheme.totalGoldWeight += totalGoldWeight;
+        scheme.bonusGoldWeight += bonusWeight;
+        scheme.lastPaymentDate = new Date();
+        scheme.nextDueDate = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
+
+        if (scheme.schemeType === 'flexible') {
+            scheme.paidInstallments = flexibleProgress.paidInstallments;
+            scheme.advanceAmount = flexibleProgress.advanceAmount;
+        } else {
+            scheme.paidInstallments += 1;
+            scheme.advanceAmount = 0;
+        }
+
+        scheme.installmentHistory.push({
+            installmentNumber,
+            amount: numericAmount,
+            goldRate,
+            goldWeight: totalGoldWeight,
+            bonusWeight,
+            paymentDate: new Date(),
+            paymentMethod,
+            transactionId,
+            paymentId: payment._id,
+            status: 'completed'
+        });
+
+        if (scheme.totalAmountPaid >= totalPlanAmount) {
+            scheme.status = 'matured';
+        }
+
+        await scheme.save();
+
+        await User.findByIdAndUpdate(targetUserId, {
+            $inc: {
+                totalGoldWeight: totalGoldWeight,
+                totalSavings: numericAmount
+            }
+        });
+
+        res.status(201).json({
+            success: true,
+            message: isPrivilegedCollector ? 'Collection recorded successfully' : 'Payment recorded successfully',
+            data: payment
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // @desc    Compatibility endpoint for passbook-style grouped payments
 // @route   GET /api/payments/user/self
 // @access  Private
@@ -440,7 +613,9 @@ exports.getGroupedPaymentsForSelf = async (req, res, next) => {
                 installment_number: payment.installmentNumber,
                 payment_method: payment.paymentMethod,
                 payment_date: payment.paymentDate,
-                invoice_number: payment.invoiceNumber
+                invoice_number: payment.invoiceNumber,
+                bill_number: payment.billNumber || '',
+                collection_source: payment.collectionSource || 'customer'
             });
         });
 

@@ -670,8 +670,6 @@ exports.approveRedemption = async (req, res, next) => {
             'redemptionDetails.redemptionId': redemption._id
         });
 
-        console.log(`📱 Delivery OTP for redemption ${redemption.redemptionId}: ${otp}`);
-
         res.status(200).json({
             success: true,
             message: 'Redemption approved successfully',
@@ -870,6 +868,73 @@ exports.getOperationalInsights = async (req, res, next) => {
                 branchPerformance,
                 topCustomers,
                 overdueSchemes
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get collection summary split by collector/source
+// @route   GET /api/admin/collection-summary
+// @access  Private/Admin
+exports.getCollectionSummary = async (req, res, next) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const match = { status: 'completed' };
+
+        if (startDate || endDate) {
+            match.paymentDate = {};
+            if (startDate) match.paymentDate.$gte = new Date(startDate);
+            if (endDate) match.paymentDate.$lte = new Date(endDate);
+        }
+
+        const [bySource, byCollector, unassigned] = await Promise.all([
+            Payment.aggregate([
+                { $match: match },
+                {
+                    $group: {
+                        _id: '$collectionSource',
+                        totalAmount: { $sum: '$amount' },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalAmount: -1 } }
+            ]),
+            Payment.aggregate([
+                { $match: match },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'collectedBy',
+                        foreignField: '_id',
+                        as: 'collector'
+                    }
+                },
+                { $unwind: { path: '$collector', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: '$collector._id',
+                        collectorName: { $first: '$collector.name' },
+                        collectorRole: { $first: '$collector.role' },
+                        totalAmount: { $sum: '$amount' },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalAmount: -1 } }
+            ]),
+            Payment.countDocuments({
+                ...match,
+                $or: [{ collectedBy: { $exists: false } }, { collectedBy: null }]
+            })
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                bySource,
+                byCollector,
+                customerSelfPayments: unassigned
             }
         });
     } catch (error) {

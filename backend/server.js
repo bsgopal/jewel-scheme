@@ -59,12 +59,11 @@ app.use(cors({
         }
 
         const message = `CORS blocked for origin: ${origin}. Allowed origins: ${allowedOrigins.join(', ')}`;
-        console.warn('⚠️ ' + message);
         return callback(new Error(message));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Expires']
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -121,11 +120,9 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
     initializeGoldRateScheduler();
-    console.log(`💎 JewelScheme API running on port ${PORT}`);
 });
 
 process.on('unhandledRejection', (err) => {
-    console.error(`Error: ${err.message}`);
     server.close(() => process.exit(1));
 });
 

@@ -7,6 +7,33 @@ const {
     getRateForPurity
 } = require('../services/goldRateFetcher');
 
+const calculateFlexibleProgress = (scheme, totalAmountPaid) => {
+    const installmentAmount = Number(scheme.planAmount || scheme.monthlyAmount || 0);
+    if (!installmentAmount) {
+        return {
+            paidInstallments: scheme.paidInstallments || 0,
+            advanceAmount: 0,
+            currentInstallmentBalance: 0
+        };
+    }
+
+    const safeTotalPaid = Number(totalAmountPaid || 0);
+    const paidInstallments = Math.min(
+        Number(scheme.totalInstallments || 0),
+        Math.floor(safeTotalPaid / installmentAmount)
+    );
+    const advanceAmount = Math.max(0, safeTotalPaid - (paidInstallments * installmentAmount));
+    const currentInstallmentBalance = advanceAmount === 0 && safeTotalPaid > 0
+        ? 0
+        : Math.max(0, installmentAmount - advanceAmount);
+
+    return {
+        paidInstallments,
+        advanceAmount,
+        currentInstallmentBalance
+    };
+};
+
 // Scheme plans configuration
 const SCHEME_PLANS = [
     {
@@ -223,9 +250,11 @@ exports.createScheme = async (req, res, next) => {
         // Create scheme
         const scheme = await Scheme.create({
             user: req.user._id,
+            catalogPlan: planId || null,
             schemeName: plan.name,
             schemeType: plan.type,
             monthlyAmount,
+            planAmount: monthlyAmount,
             totalInstallments: plan.totalInstallments,
             goldPurity: purity,
             totalAmountPaid: monthlyAmount,
@@ -320,6 +349,9 @@ exports.getUserSchemes = async (req, res, next) => {
                 ? parseFloat(((schemeObj.profit / scheme.totalAmountPaid) * 100).toFixed(2))
                 : 0;
             schemeObj.currentGoldRate = rateForPurity;
+            schemeObj.totalPlanAmount = scheme.totalPlanAmount;
+            schemeObj.remainingAmount = scheme.remainingAmount;
+            schemeObj.currentInstallmentBalance = scheme.currentInstallmentBalance;
 
             return schemeObj;
         });
@@ -369,10 +401,13 @@ exports.getSchemeById = async (req, res, next) => {
             : 0;
         schemeObj.isOverdue = scheme.isOverdue();
         schemeObj.daysOverdue = scheme.getDaysOverdue();
+        schemeObj.totalPlanAmount = scheme.totalPlanAmount;
+        schemeObj.remainingAmount = scheme.remainingAmount;
+        schemeObj.currentInstallmentBalance = scheme.currentInstallmentBalance;
 
         // Get payment history
         const payments = await Payment.find({ scheme: scheme._id })
-            .select('paymentId amount goldWeightCredited totalGoldWeight paymentMethod status paymentDate invoiceNumber')
+            .select('paymentId amount goldWeightCredited totalGoldWeight paymentMethod status paymentDate invoiceNumber billNumber collectionSource')
             .sort({ paymentDate: -1 });
 
         schemeObj.payments = payments;
@@ -424,10 +459,17 @@ exports.payInstallment = async (req, res, next) => {
         }
 
         // Check if already fully paid
-        if (scheme.paidInstallments >= scheme.totalInstallments) {
+        if (scheme.totalAmountPaid >= ((scheme.planAmount || scheme.monthlyAmount) * scheme.totalInstallments)) {
             return res.status(400).json({
                 success: false,
                 message: 'All installments already paid. Scheme is ready for redemption.'
+            });
+        }
+
+        if (scheme.schemeType !== 'flexible' && Number(amount) !== Number(scheme.monthlyAmount)) {
+            return res.status(400).json({
+                success: false,
+                message: `This plan accepts only the fixed installment amount of Rs ${Number(scheme.monthlyAmount).toLocaleString('en-IN')}`
             });
         }
 
@@ -469,8 +511,8 @@ exports.payInstallment = async (req, res, next) => {
         });
 
         // Update scheme
-        scheme.paidInstallments += 1;
-        scheme.totalAmountPaid += amount;
+        const nextTotalAmountPaid = Number(scheme.totalAmountPaid || 0) + Number(amount);
+        scheme.totalAmountPaid = nextTotalAmountPaid;
         scheme.totalGoldWeight += totalGoldWeight;
         scheme.bonusGoldWeight += bonusWeight;
         scheme.lastPaymentDate = new Date();
@@ -479,8 +521,19 @@ exports.payInstallment = async (req, res, next) => {
         scheme.nextDueDate = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
 
         // Add to installment history
+        const flexibleProgress = calculateFlexibleProgress(scheme, nextTotalAmountPaid);
+        if (scheme.schemeType === 'flexible') {
+            scheme.paidInstallments = flexibleProgress.paidInstallments;
+            scheme.advanceAmount = flexibleProgress.advanceAmount;
+        } else {
+            scheme.paidInstallments += 1;
+            scheme.advanceAmount = 0;
+        }
+
         scheme.installmentHistory.push({
-            installmentNumber: scheme.paidInstallments,
+            installmentNumber: scheme.schemeType === 'flexible'
+                ? Math.min(scheme.totalInstallments, flexibleProgress.paidInstallments + (flexibleProgress.advanceAmount > 0 ? 1 : 0))
+                : scheme.paidInstallments,
             amount,
             goldRate,
             goldWeight: totalGoldWeight,
@@ -493,7 +546,7 @@ exports.payInstallment = async (req, res, next) => {
         });
 
         // Check if matured
-        if (scheme.paidInstallments >= scheme.totalInstallments) {
+        if (scheme.totalAmountPaid >= ((scheme.planAmount || scheme.monthlyAmount) * scheme.totalInstallments)) {
             scheme.status = 'matured';
         }
 
@@ -522,7 +575,10 @@ exports.payInstallment = async (req, res, next) => {
                 totalInstallments: scheme.totalInstallments,
                 schemeStatus: scheme.status,
                 totalGoldWeight: scheme.totalGoldWeight,
-                nextDueDate: scheme.nextDueDate
+                nextDueDate: scheme.nextDueDate,
+                remainingAmount: Math.max(0, ((scheme.planAmount || scheme.monthlyAmount) * scheme.totalInstallments) - scheme.totalAmountPaid),
+                advanceAmount: scheme.advanceAmount || 0,
+                currentInstallmentBalance: scheme.currentInstallmentBalance
             }
         });
 

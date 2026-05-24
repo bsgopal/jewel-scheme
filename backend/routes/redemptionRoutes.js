@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     createRedemption,
     getUserRedemptions,
+    getRedemptionByBillNumber,
     getRedemptionById,
     cancelRedemption,
     submitFeedback
@@ -14,6 +15,8 @@ router.use(protect);
 router.route('/')
     .get(getUserRedemptions)
     .post(createRedemption);
+
+router.get('/bill/:billNumber', getRedemptionByBillNumber);
 
 router.route('/:id')
     .get(getRedemptionById);

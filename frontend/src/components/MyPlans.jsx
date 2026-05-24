@@ -60,6 +60,9 @@ const mapScheme = (scheme) => ({
   totalInstallments: scheme.totalInstallments,
   totalGoldWeight: scheme.totalGoldWeight,
   totalAmountPaid: scheme.totalAmountPaid,
+  remainingAmount: scheme.remainingAmount,
+  currentInstallmentBalance: scheme.currentInstallmentBalance,
+  advanceAmount: scheme.advanceAmount,
   source: "scheme",
 });
 
@@ -95,7 +98,7 @@ function AdminPlanCard({ plan, currentRoute, navigate }) {
   return (
     <motion.div variants={itemVariants} whileHover={{ y: -5 }}>
       <div
-        onClick={() => navigate(`/createnewplan/${id}`, { state: { plan, backTo: currentRoute } })}
+        onClick={() => navigate(`/catalog-plan-details/${id}`, { state: { plan, backTo: currentRoute } })}
         style={{
           background: "#FFFFFF",
           borderRadius: 18,
@@ -186,7 +189,7 @@ function AdminPlanCard({ plan, currentRoute, navigate }) {
             whileTap={{ scale: 0.96 }}
             onClick={(event) => {
               event.stopPropagation();
-              navigate(`/createnewplan/${id}`, { state: { plan, backTo: currentRoute } });
+              navigate(`/catalog-plan-details/${id}`, { state: { plan, backTo: currentRoute } });
             }}
             style={{
               width: "100%",
@@ -203,7 +206,7 @@ function AdminPlanCard({ plan, currentRoute, navigate }) {
               cursor: "pointer",
             }}
           >
-            Edit Plan
+            View Plan
           </motion.button>
         </div>
       </div>

@@ -88,7 +88,6 @@ const sendOTPEmail = async (email, otp, purpose = 'verification') => {
         html
     });
 
-    console.log(`📧 OTP email sent to ${email} [${info.messageId}]`);
     return { success: true, messageId: info.messageId };
 };
 
@@ -106,7 +105,6 @@ const sendEmail = async (email, subject, html) => {
         html
     });
 
-    console.log(`📧 Email sent to ${email} [${info.messageId}]`);
     return { success: true, messageId: info.messageId };
 };
 

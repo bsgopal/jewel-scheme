@@ -67,6 +67,14 @@ export default function ManageAgents() {
       setFormErr("Name, phone and password are required.");
       return;
     }
+    if (form.phone.length !== 10) {
+      setFormErr("Phone number must be 10 digits.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setFormErr("Password must be at least 6 characters.");
+      return;
+    }
     setSaving(true); setFormErr("");
     try {
       const res = await axios.post(

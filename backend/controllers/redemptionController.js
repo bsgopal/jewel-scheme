@@ -15,7 +15,7 @@ exports.createRedemption = async (req, res, next) => {
             schemeId, items, goldWeightUsed, goldRateAtRedemption, goldValueUsed,
             totalItemsValue, totalMakingCharges, totalMakingChargeDiscount,
             totalStoneCharges, totalGST, additionalAmountRequired, additionalAmountPaid,
-            paymentMethod, paymentTransactionId, refundAmount, finalAmount,
+            paymentMethod, paymentTransactionId, refundAmount, finalAmount, billNumber, billingAmount,
             branch, deliveryType, deliveryAddress, remarks
         } = req.body;
 
@@ -72,6 +72,8 @@ exports.createRedemption = async (req, res, next) => {
             additionalAmountRequired: additionalAmountRequired || 0,
             additionalAmountPaid: additionalAmountPaid || 0,
             paymentMethod,
+            billNumber: billNumber || '',
+            billingAmount: billingAmount || finalAmount || 0,
             paymentTransactionId,
             refundAmount: refundAmount || 0,
             finalAmount,
@@ -91,6 +93,31 @@ exports.createRedemption = async (req, res, next) => {
             data: populated
         });
 
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get redemption by bill number for logged-in user
+// @route   GET /api/redemptions/bill/:billNumber
+// @access  Private
+exports.getRedemptionByBillNumber = async (req, res, next) => {
+    try {
+        const redemption = await Redemption.findOne({
+            billNumber: req.params.billNumber,
+            user: req.user._id
+        })
+            .populate('scheme', 'schemeName schemeId goldPurity totalGoldWeight')
+            .populate('user', 'name customerId phone email');
+
+        if (!redemption) {
+            return res.status(404).json({
+                success: false,
+                message: 'No redemption found for this bill number'
+            });
+        }
+
+        res.status(200).json({ success: true, data: redemption });
     } catch (error) {
         next(error);
     }

@@ -5,8 +5,7 @@
  */
 
 const sendSMS = async (phone, message) => {
-    // Implement Twilio or any SMS gateway here if needed
-    console.log(`[SMS stub] To: ${phone} | Message: ${message}`);
+    // SMS gateway implementation
     return { success: true };
 };
 

@@ -95,7 +95,7 @@ export default function NewPlan() {
 
   const handlePrimaryAction = (plan) => {
     if (canManagePlans) {
-      navigate(`/createnewplan/${plan.id}`, { state: { backTo: currentRoute } });
+      navigate(`/catalog-plan-details/${plan.id}`, { state: { plan, backTo: currentRoute } });
       return;
     }
 
@@ -229,7 +229,7 @@ export default function NewPlan() {
                     ) : null}
                     {!selectionMode && (
                       <motion.button whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }} onClick={() => handlePrimaryAction(plan)} style={{ width: "100%", height: 44, marginTop: 16, borderRadius: 12, border: "none", background: "linear-gradient(135deg, #7B0000, #C0392B)", color: "#FFD700", fontWeight: 800, fontSize: "0.74rem", letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 4px 14px rgba(139,26,26,0.3)" }}>
-                        {canManagePlans ? "Edit Plan" : "Join This Plan"}
+                        {canManagePlans ? "View Plan" : "Join This Plan"}
                       </motion.button>
                     )}
                   </div>

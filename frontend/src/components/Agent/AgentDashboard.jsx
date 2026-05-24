@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { CircularProgress, Alert } from "@mui/material";
+import { getStoredRole, isAdminLike } from "../../utils/permissions";
 
 const API = process.env.REACT_APP_API_URL;
 const headers = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -207,6 +208,13 @@ function InstCard({ item, onCollect, idx, selected, onToggle }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function AgentDashboard() {
   const navigate = useNavigate();
+  const role = getStoredRole();
+  const canSeeAllAgentActions = isAdminLike(role);
+  const handleLogout = () => {
+    localStorage.clear();
+    delete axios.defaults.headers.common.Authorization;
+    window.location.replace("/");
+  };
 
   const [stats,      setStats]      = useState(null);
   const [pending,    setPending]    = useState([]);
@@ -402,6 +410,20 @@ export default function AgentDashboard() {
           ← Home
         </motion.button>
 
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleLogout}
+          style={{
+            position: "absolute", top: 28, right: 20,
+            background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.22)",
+            borderRadius: 10, padding: "7px 14px", cursor: "pointer",
+            color: "#fff", fontSize: "0.72rem", fontWeight: 800,
+            fontFamily: "'Montserrat',sans-serif",
+          }}
+        >
+          Logout
+        </motion.button>
+
         <div style={{
           fontSize: "0.65rem", color: "rgba(255,255,255,0.6)",
           letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4,
@@ -422,9 +444,9 @@ export default function AgentDashboard() {
 
         <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
           {[
-            { label: "My Customers",    route: "/agent/customers" },
-            { label: "Manage Amounts",  route: "/agent/manage-amounts" },
-            { label: "Payment History", route: "/payment-history" },
+            { label: "My Customers", route: "/agent/customers" },
+            ...(canSeeAllAgentActions ? [{ label: "Manage Amounts", route: "/agent/manage-amounts" }] : []),
+            ...(canSeeAllAgentActions ? [{ label: "Payment History", route: "/payment-history" }] : []),
           ].map(a => (
             <motion.button
               key={a.label}

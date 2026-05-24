@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const PlanCatalog = require('../models/PlanCatalog');
+const Scheme = require('../models/Scheme');
+const Payment = require('../models/Payment');
 
 const uploadDir = path.join(__dirname, '..', 'uploads');
 
@@ -170,10 +172,31 @@ exports.updatePlan = async (req, res, next) => {
 
 exports.deletePlan = async (req, res, next) => {
     try {
-        const plan = await PlanCatalog.findByIdAndDelete(req.params.id);
+        const plan = await PlanCatalog.findById(req.params.id);
         if (!plan) {
             return res.status(404).json({ success: false, message: 'Plan not found' });
         }
+
+        const linkedSchemes = await Scheme.find({
+            $or: [
+                { catalogPlan: plan._id },
+                { schemeName: plan.name }
+            ]
+        }).select('_id');
+
+        if (linkedSchemes.length > 0) {
+            const linkedSchemeIds = linkedSchemes.map((scheme) => scheme._id);
+            const paymentCount = await Payment.countDocuments({ scheme: { $in: linkedSchemeIds } });
+
+            return res.status(400).json({
+                success: false,
+                message: paymentCount > 0
+                    ? 'This plan cannot be deleted because customers have already joined it and payment history exists.'
+                    : 'This plan cannot be deleted because customers have already joined it.'
+            });
+        }
+
+        await plan.deleteOne();
 
         res.status(200).json({ success: true, message: 'Plan deleted successfully' });
     } catch (error) {

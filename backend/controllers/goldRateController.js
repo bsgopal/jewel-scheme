@@ -194,3 +194,57 @@ exports.refreshRates = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Manually set gold rates (for development/testing)
+// @route   POST /api/gold-rate/set
+// @access  Public
+exports.setRates = async (req, res, next) => {
+    try {
+        const { gold24K, gold22K, gold18K, silver } = req.body;
+
+        if (!gold24K || !gold22K || !gold18K || !silver) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide gold24K, gold22K, gold18K, and silver rates'
+            });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const existingRate = await GoldRate.findOne({
+            date: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+
+        const rateData = {
+            date: today,
+            gold24K: Number(gold24K),
+            gold22K: Number(gold22K),
+            gold18K: Number(gold18K),
+            silver: Number(silver),
+            source: 'manual',
+            fetchedAt: new Date(),
+            isActive: true,
+            notes: `Manually set at ${new Date().toISOString()}`
+        };
+
+        let updatedRate;
+        if (existingRate) {
+            existingRate.set(rateData);
+            updatedRate = await existingRate.save();
+        } else {
+            updatedRate = await GoldRate.create(rateData);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Gold rates set successfully',
+            data: updatedRate
+        });
+    } catch (error) {
+        next(error);
+    }
+};
